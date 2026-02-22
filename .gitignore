@@ -7,6 +7,10 @@
 /build/
 
 # SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
