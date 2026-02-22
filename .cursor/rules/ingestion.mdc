@@ -1,0 +1,38 @@
+---
+description: AI ingestion pipeline — prompt strategy, JSON contracts, dedupe
+globs: "**/ingestion/**"
+alwaysApply: false
+---
+
+# Ingestion Pipeline Conventions
+
+## Prompt Strategy
+
+Use **separate prompts per content type**:
+
+| Type      | Purpose                                  |
+|-----------|------------------------------------------|
+| `NEWS`    | Articles, interviews, announcements      |
+| `RELEASE` | Albums, singles, EPs, music videos       |
+| `EVENT`   | Concerts, festivals, tour dates (fallback when structured provider has no data) |
+
+## JSON Extraction Contract
+
+Every prompt must return a **strict JSON array** matching the content-type schema. Validate the response with Zod before storing. Discard any item that fails validation rather than attempting to repair it.
+
+## Time Windows
+
+- **First run:** 30-day backfill per artist.
+- **Subsequent runs:** Incremental, fetching only items since the last successful run.
+
+## Confidence Threshold
+
+A global `MIN_CONFIDENCE` setting controls the minimum confidence score. Items scoring below this threshold are discarded before insert.
+
+## Dedupe
+
+Before inserting, compute `hash(type + artistId + normalizedUrl)` and skip if the hash already exists. This prevents duplicate items across overlapping search results or re-runs.
+
+## Testability
+
+All OpenAI and event-provider calls go through injectable interfaces (see `development-standards.mdc`). Tests use stubs that return canned JSON — never call real APIs.

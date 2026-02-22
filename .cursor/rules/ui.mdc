@@ -1,0 +1,34 @@
+---
+description: UI conventions — React Router framework mode, Tailwind, shadcn/ui
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# UI Conventions
+
+## React Router (Framework Mode)
+
+- Use **loaders** for data fetching and **actions** for mutations — not `useEffect`.
+- Route modules export `loader`, `action`, and a default component.
+- Access loader data with `useLoaderData`.
+
+## Styling
+
+- **Tailwind CSS** for all styling. No separate CSS files.
+- Use utility classes directly on elements; extract to components (not class strings) when reuse is needed.
+
+## Component Library
+
+- **shadcn/ui** components live in the project's `components/ui/` directory.
+- Import from `~/components/ui/<component>`, not from an external package.
+- Prefer shadcn primitives over custom implementations for common patterns (buttons, dialogs, inputs, etc.).
+
+## Component Patterns
+
+- Functional components only.
+- Co-locate component, types, and helpers in the same directory.
+- Keep components small — extract sub-components when a file exceeds ~150 lines.
+
+## Client-Side Async State
+
+Use TanStack Query only when React Router loaders are insufficient (e.g. polling, optimistic updates, or client-only flows). Prefer loaders by default.

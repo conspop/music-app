@@ -1,0 +1,28 @@
+---
+description: High-level project context for the music news/events app
+alwaysApply: true
+---
+
+# Project Overview
+
+A web app where music lovers follow artists and get a nightly AI-curated set of relevant news, new releases, and nearby concerts.
+
+## Tech Stack
+
+- **Framework:** React Router (framework mode)
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Client state:** TanStack Query
+- **Database:** SQLite + Drizzle ORM
+- **Auth:** Google OAuth
+- **Hosting:** Fly.io (single server, SQLite on persistent volume)
+- **AI:** OpenAI for web-content extraction + structured event provider
+- **Testing:** Vitest + Testing Library + MSW
+
+## Architecture
+
+- Single long-running server on Fly.io with a persistent SQLite volume.
+- Nightly cron job triggers the ingestion pipeline (news, releases, events).
+- Users authenticate via Google OAuth, set a home location, and follow artists.
+- Three main content tabs: News, Releases, Events (calendar-style).
+
+See `high-level-plan.md` for full details and implementation phases.

@@ -1,0 +1,40 @@
+---
+description: Core development workflow rules — TDD, atomic changes, interfaces
+alwaysApply: true
+---
+
+# Development Standards
+
+## Atomic Slices
+
+Every change must be a small, self-contained unit. One concern per commit — don't mix feature work with refactors or unrelated fixes.
+
+## Tests First (TDD)
+
+1. Write a failing test that describes the expected behaviour.
+2. Implement the minimum code to make it pass.
+3. Refactor while keeping tests green.
+
+## External Services Behind Interfaces
+
+All external services (OpenAI, event providers, email, etc.) must be accessed through injectable interfaces. Production code depends on the interface; concrete implementations are injected at the composition root.
+
+```typescript
+// Define the contract
+interface EventProvider {
+  search(artist: string, location: Location): Promise<Event[]>;
+}
+
+// Inject via function parameter or constructor
+function ingestEvents(provider: EventProvider, ...) { ... }
+```
+
+## Schema Changes Require Migration + Tests
+
+- Every schema change goes through `drizzle-kit generate`.
+- Each migration must have a corresponding test verifying the new state.
+- No hand-written SQL outside of Drizzle migration files.
+
+## No Real Network Calls in Tests
+
+Use MSW to intercept HTTP requests. Tests must never hit real endpoints.

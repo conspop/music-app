@@ -1,0 +1,44 @@
+---
+description: Testing conventions — Vitest, Testing Library, MSW
+globs: "**/*.test.ts, **/*.test.tsx"
+alwaysApply: false
+---
+
+# Testing Conventions
+
+## Stack
+
+- **Runner:** Vitest
+- **DOM:** Testing Library (`@testing-library/react`)
+- **HTTP mocking:** MSW (`msw`)
+
+## Structure
+
+- Use `describe` for the unit or feature, `it` for individual behaviours.
+- Follow Arrange / Act / Assert within each test.
+- Keep tests focused — one assertion per logical behaviour.
+
+## MSW Usage
+
+Define handlers next to the test file or in a shared `mocks/` directory. Every external HTTP call must be intercepted — tests must never hit the network.
+
+```typescript
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+
+const server = setupServer(
+  http.get("/api/feed", () =>
+    HttpResponse.json([{ id: "1", title: "New album" }])
+  )
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+```
+
+## Naming
+
+- Test files live next to the module they test: `foo.ts` → `foo.test.ts`.
+- Describe blocks mirror the module or component name.
+- `it("should ...")` — describe expected behaviour, not implementation.

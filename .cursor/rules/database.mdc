@@ -1,0 +1,50 @@
+---
+description: Database conventions — Drizzle ORM, SQLite, repository pattern
+globs: "**/db/**, **/schema.*, **/migrations/**"
+alwaysApply: false
+---
+
+# Database Conventions
+
+## ORM & Driver
+
+- **ORM:** Drizzle ORM
+- **Database:** SQLite (single file on Fly.io persistent volume)
+- **Migrations:** Generated with `drizzle-kit generate`, applied with `drizzle-kit migrate`
+
+## Schema
+
+Define tables with Drizzle's `sqliteTable`. Keep all table definitions in dedicated schema files.
+
+```typescript
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+
+export const artists = sqliteTable("artists", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+```
+
+## Repository Pattern
+
+- One repository module per entity (e.g. `artists.repository.ts`).
+- Repositories export plain functions that accept a Drizzle database instance.
+- No raw SQL outside of Drizzle migration files.
+
+## Dedupe Strategy
+
+Content items are deduplicated before insert using:
+
+```
+hash(type + artistId + normalizedUrl)
+```
+
+Check for an existing hash before inserting new items.
+
+## Migrations
+
+Every schema change requires:
+1. Update the schema file.
+2. Run `drizzle-kit generate` to create a migration.
+3. Add a test verifying the migration applies cleanly and the new schema works.
