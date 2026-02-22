@@ -18,21 +18,35 @@ vi.mock("~/server/context", () => ({
   getAppContext: vi.fn(),
 }));
 
+vi.mock("~/ingestion/ingest-artist", () => ({
+  ingestArtist: vi.fn().mockResolvedValue({
+    inserted: 0,
+    skippedDupes: 0,
+    skippedLowConfidence: 0,
+    errors: 0,
+  }),
+}));
+
 import { getAppContext } from "~/server/context";
+import { ingestArtist } from "~/ingestion/ingest-artist";
 const mockedGetAppContext = vi.mocked(getAppContext);
+const mockedIngestArtist = vi.mocked(ingestArtist);
 
 describe("api/follows", () => {
   let db: DrizzleDb;
   let sessions: ReturnType<typeof createSessionStorage>;
+  const fakeContentExtractor = { extract: vi.fn().mockResolvedValue([]) };
 
   beforeEach(() => {
     db = createTestDb();
     sessions = createSessionStorage(SECRET);
+    fakeContentExtractor.extract.mockClear();
+    mockedIngestArtist.mockClear();
     mockedGetAppContext.mockReturnValue({
       db,
       sessions,
       authProvider: {} as any,
-      contentExtractor: {} as any,
+      contentExtractor: fakeContentExtractor as any,
     });
 
     insertUser(db, {
@@ -147,6 +161,39 @@ describe("api/follows", () => {
 
       expect(body.artist).toMatchObject({ name: "Portishead" });
       expect(body.follow.artistId).toBe(body.artist.id);
+    });
+
+    it("triggers ingestion for a newly created artist", async () => {
+      const request = await authedRequest("http://localhost/api/follows", {
+        method: "POST",
+        body: new URLSearchParams({
+          intent: "follow",
+          artistName: "Portishead",
+        }),
+      });
+
+      await callAction(request);
+
+      expect(mockedIngestArtist).toHaveBeenCalledOnce();
+      expect(mockedIngestArtist).toHaveBeenCalledWith(
+        expect.objectContaining({
+          artist: expect.objectContaining({ name: "Portishead" }),
+        }),
+      );
+    });
+
+    it("does not trigger ingestion for an existing artist", async () => {
+      const request = await authedRequest("http://localhost/api/follows", {
+        method: "POST",
+        body: new URLSearchParams({
+          intent: "follow",
+          artistName: "Radiohead",
+        }),
+      });
+
+      await callAction(request);
+
+      expect(mockedIngestArtist).not.toHaveBeenCalled();
     });
 
     it("returns 400 when artistName is missing", async () => {

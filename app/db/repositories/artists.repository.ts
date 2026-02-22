@@ -31,11 +31,12 @@ export function findOrCreateArtist(db: DrizzleDb, name: string) {
     .from(artists)
     .where(eq(artists.name, name))
     .get();
-  if (existing) return existing;
+  if (existing) return { artist: existing, isNew: false };
 
-  return db
+  const artist = db
     .insert(artists)
     .values({ id: generateId(), name, createdAt: new Date() })
     .returning()
     .get();
+  return { artist, isNew: true };
 }

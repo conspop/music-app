@@ -72,21 +72,23 @@ describe("artists repository", () => {
   });
 
   describe("findOrCreateArtist", () => {
-    it("returns existing artist when name matches exactly", () => {
+    it("returns existing artist with isNew false when name matches exactly", () => {
       insertArtist(db, {
         id: "a1",
         name: "Radiohead",
         createdAt: new Date("2025-01-01"),
       });
 
-      const artist = findOrCreateArtist(db, "Radiohead");
+      const { artist, isNew } = findOrCreateArtist(db, "Radiohead");
       expect(artist).toMatchObject({ id: "a1", name: "Radiohead" });
+      expect(isNew).toBe(false);
     });
 
-    it("creates a new artist when name does not exist", () => {
-      const artist = findOrCreateArtist(db, "Bjork");
+    it("creates a new artist with isNew true when name does not exist", () => {
+      const { artist, isNew } = findOrCreateArtist(db, "Bjork");
       expect(artist.name).toBe("Bjork");
       expect(artist.id).toBeTruthy();
+      expect(isNew).toBe(true);
 
       const found = findArtistById(db, artist.id);
       expect(found).toMatchObject({ name: "Bjork" });
@@ -99,8 +101,9 @@ describe("artists repository", () => {
         createdAt: new Date("2025-01-01"),
       });
 
-      const artist = findOrCreateArtist(db, "radiohead");
+      const { artist, isNew } = findOrCreateArtist(db, "radiohead");
       expect(artist.id).not.toBe("a1");
+      expect(isNew).toBe(true);
     });
   });
 });

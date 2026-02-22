@@ -8,6 +8,8 @@ import {
   unfollowArtist,
 } from "~/db/repositories/follows.repository";
 import { findOrCreateArtist } from "~/db/repositories/artists.repository";
+import { ingestArtist } from "~/ingestion/ingest-artist";
+import { INGESTION_CONFIG } from "~/ingestion/config";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent } from "~/components/ui/card";
@@ -36,13 +38,23 @@ export async function action({ request }: Route.ActionArgs) {
       return { error: "Artist name is required" };
     }
 
-    const artist = findOrCreateArtist(ctx.db, artistName.trim());
+    const { artist, isNew } = findOrCreateArtist(ctx.db, artistName.trim());
     followArtist(ctx.db, {
       id: crypto.randomUUID(),
       userId: user.id,
       artistId: artist.id,
       createdAt: new Date(),
     });
+
+    if (isNew) {
+      ingestArtist({
+        db: ctx.db,
+        contentExtractor: ctx.contentExtractor,
+        config: INGESTION_CONFIG,
+        artist,
+      }).catch((err) => console.error(`[follow] ingestion failed for "${artist.name}":`, err));
+    }
+
     return { ok: true };
   }
 
