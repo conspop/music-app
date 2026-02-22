@@ -3,21 +3,16 @@ import type { DrizzleDb } from "~/db/connection";
 import { artists, contentItems, follows } from "~/db/schema";
 
 export interface FeedOptions {
-  type?: "NEWS" | "RELEASE";
   artistIds?: string[];
   limit?: number;
   offset?: number;
 }
-
-const FEED_TYPES = ["NEWS", "RELEASE"];
 
 export function findFeedItems(
   db: DrizzleDb,
   userId: string,
   opts: FeedOptions = {},
 ) {
-  const types = opts.type ? [opts.type] : FEED_TYPES;
-
   let query = db
     .select({
       id: contentItems.id,
@@ -38,7 +33,7 @@ export function findFeedItems(
     .where(
       and(
         eq(follows.userId, userId),
-        inArray(contentItems.type, types),
+        eq(contentItems.type, "RELEASE"),
         opts.artistIds?.length
           ? inArray(contentItems.artistId, opts.artistIds)
           : undefined,

@@ -11,11 +11,6 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const opts: FeedOptions = {};
 
-  const type = url.searchParams.get("type");
-  if (type === "NEWS" || type === "RELEASE") {
-    opts.type = type;
-  }
-
   const limit = url.searchParams.get("limit");
   if (limit != null) {
     opts.limit = Math.max(1, parseInt(limit, 10) || 20);

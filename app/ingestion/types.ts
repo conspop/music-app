@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CONTENT_TYPES = ["NEWS", "RELEASE", "EVENT"] as const;
+export const CONTENT_TYPES = ["RELEASE", "EVENT"] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
 const nullable = <T extends z.ZodTypeAny>(schema: T) =>
@@ -13,11 +13,6 @@ const baseFields = {
   imageUrl: nullable(z.string().url()),
   confidence: z.number().min(0).max(1),
 };
-
-export const extractedNewsItemSchema = z.object({
-  ...baseFields,
-  publishedAt: z.string(),
-});
 
 export const extractedReleaseItemSchema = z.object({
   ...baseFields,
@@ -34,12 +29,10 @@ export const extractedEventItemSchema = z.object({
 });
 
 export const extractedItemSchema = z.discriminatedUnion("type", [
-  extractedNewsItemSchema.extend({ type: z.literal("NEWS") }),
   extractedReleaseItemSchema.extend({ type: z.literal("RELEASE") }),
   extractedEventItemSchema.extend({ type: z.literal("EVENT") }),
 ]);
 
-export type ExtractedNewsItem = z.infer<typeof extractedNewsItemSchema>;
 export type ExtractedReleaseItem = z.infer<typeof extractedReleaseItemSchema>;
 export type ExtractedEventItem = z.infer<typeof extractedEventItemSchema>;
 export type ExtractedItem = z.infer<typeof extractedItemSchema>;

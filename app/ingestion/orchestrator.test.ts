@@ -65,10 +65,10 @@ describe("runIngestion", () => {
 
     const extractor = fakeExtractor({
       Radiohead: {
-        NEWS: [
+        RELEASE: [
           {
-            type: "NEWS",
-            title: "Radiohead News",
+            type: "RELEASE",
+            title: "Radiohead Album",
             url: "https://example.com/rh",
             publishedAt: "2025-06-01",
             confidence: 0.9,
@@ -114,20 +114,20 @@ describe("runIngestion", () => {
 
     const extractor = fakeExtractor({
       Radiohead: {
-        NEWS: [
+        RELEASE: [
           {
-            type: "NEWS",
-            title: "News",
-            url: "https://example.com/news",
+            type: "RELEASE",
+            title: "Album",
+            url: "https://example.com/release",
             publishedAt: "2025-06-01",
             confidence: 0.9,
           },
         ],
       },
       Portishead: {
-        NEWS: [
+        RELEASE: [
           {
-            type: "NEWS",
+            type: "RELEASE",
             title: "Should Not Appear",
             url: "https://example.com/nope",
             publishedAt: "2025-06-01",
@@ -170,9 +170,9 @@ describe("runIngestion", () => {
 
     const extractor = fakeExtractor({
       Radiohead: {
-        NEWS: [
+        RELEASE: [
           {
-            type: "NEWS",
+            type: "RELEASE",
             title: "RH",
             url: "https://example.com/1",
             publishedAt: "2025-06-01",
@@ -181,9 +181,9 @@ describe("runIngestion", () => {
         ],
       },
       Bjork: {
-        NEWS: [
+        RELEASE: [
           {
-            type: "NEWS",
+            type: "RELEASE",
             title: "BJ",
             url: "https://example.com/2",
             publishedAt: "2025-06-01",
@@ -192,9 +192,9 @@ describe("runIngestion", () => {
         ],
       },
       Portishead: {
-        NEWS: [
+        RELEASE: [
           {
-            type: "NEWS",
+            type: "RELEASE",
             title: "PH",
             url: "https://example.com/3",
             publishedAt: "2025-06-01",

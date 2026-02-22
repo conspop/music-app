@@ -19,36 +19,25 @@ afterAll(() => server.close());
 describe("createOpenAIContentExtractor", () => {
   const extractor = createOpenAIContentExtractor("test-api-key");
 
-  describe("extract NEWS", () => {
-    it("returns validated news items from OpenAI response", async () => {
+  describe("extract RELEASE", () => {
+    it("sends o4-mini with web_search_preview and high search_context_size", async () => {
+      let capturedBody: Record<string, unknown> | null = null;
       server.use(
-        http.post(RESPONSES_URL, () => {
-          return HttpResponse.json(
-            responsesBody([
-              {
-                type: "NEWS",
-                title: "Radiohead Announces New Tour",
-                url: "https://example.com/news/tour",
-                summary: "The band will tour Europe in 2026.",
-                publishedAt: "2025-06-15",
-                confidence: 0.92,
-              },
-            ]),
-          );
+        http.post(RESPONSES_URL, async ({ request }) => {
+          capturedBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(responsesBody([]));
         }),
       );
 
-      const results = await extractor.extract({
+      await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 
-      expect(results).toHaveLength(1);
-      expect(results[0]).toMatchObject({
-        type: "NEWS",
-        title: "Radiohead Announces New Tour",
-        confidence: 0.92,
+      expect(capturedBody).toMatchObject({
+        model: "o4-mini",
+        tools: [{ type: "web_search_preview", search_context_size: "high" }],
       });
     });
 
@@ -63,35 +52,13 @@ describe("createOpenAIContentExtractor", () => {
 
       await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 
       expect(capturedAuth).toBe("Bearer test-api-key");
     });
 
-    it("sends web_search tool in the request", async () => {
-      let capturedBody: Record<string, unknown> | null = null;
-      server.use(
-        http.post(RESPONSES_URL, async ({ request }) => {
-          capturedBody = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json(responsesBody([]));
-        }),
-      );
-
-      await extractor.extract({
-        artistName: "Radiohead",
-        type: "NEWS",
-        since: new Date("2025-06-01"),
-      });
-
-      expect(capturedBody).toMatchObject({
-        tools: [{ type: "web_search" }],
-      });
-    });
-  });
-
-  describe("extract RELEASE", () => {
     it("returns validated release items", async () => {
       server.use(
         http.post(RESPONSES_URL, () => {
@@ -122,6 +89,27 @@ describe("createOpenAIContentExtractor", () => {
   });
 
   describe("extract EVENT", () => {
+    it("sends o4-mini with web_search_preview and high search_context_size", async () => {
+      let capturedBody: Record<string, unknown> | null = null;
+      server.use(
+        http.post(RESPONSES_URL, async ({ request }) => {
+          capturedBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(responsesBody([]));
+        }),
+      );
+
+      await extractor.extract({
+        artistName: "Radiohead",
+        type: "EVENT",
+        since: new Date("2025-06-01"),
+      });
+
+      expect(capturedBody).toMatchObject({
+        model: "o4-mini",
+        tools: [{ type: "web_search_preview", search_context_size: "high" }],
+      });
+    });
+
     it("returns validated event items", async () => {
       server.use(
         http.post(RESPONSES_URL, () => {
@@ -157,6 +145,56 @@ describe("createOpenAIContentExtractor", () => {
         eventVenue: "O2 Arena",
       });
     });
+
+    it("parses o4-mini response with reasoning blocks and nested message", async () => {
+      const items = [
+        {
+          type: "EVENT",
+          title: "Songs at Close Range: NQ Arbuckle",
+          url: "https://example.com/events/burdock",
+          summary: "Multi-artist bill at Burdock Music Hall.",
+          eventDate: "2026-02-26",
+          eventVenue: "Burdock Music Hall",
+          eventCity: "Toronto",
+          confidence: 0.95,
+        },
+      ];
+      server.use(
+        http.post(RESPONSES_URL, () => {
+          return HttpResponse.json({
+            output: [
+              { type: "reasoning", id: "r_1" },
+              { type: "web_search_call", id: "ws_1", status: "completed" },
+              { type: "reasoning", id: "r_2" },
+              { type: "web_search_call", id: "ws_2", status: "completed" },
+              { type: "reasoning", id: "r_3" },
+              {
+                type: "message",
+                id: "msg_1",
+                role: "assistant",
+                content: [
+                  { type: "output_text", text: JSON.stringify(items) },
+                ],
+              },
+            ],
+          });
+        }),
+      );
+
+      const results = await extractor.extract({
+        artistName: "NQ Arbuckle",
+        type: "EVENT",
+        since: new Date("2026-02-22"),
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({
+        type: "EVENT",
+        title: "Songs at Close Range: NQ Arbuckle",
+        eventVenue: "Burdock Music Hall",
+        eventCity: "Toronto",
+      });
+    });
   });
 
   describe("validation and error handling", () => {
@@ -166,14 +204,14 @@ describe("createOpenAIContentExtractor", () => {
           return HttpResponse.json(
             responsesBody([
               {
-                type: "NEWS",
+                type: "RELEASE",
                 title: "Valid Item",
                 url: "https://example.com/valid",
                 publishedAt: "2025-06-15",
                 confidence: 0.9,
               },
               {
-                type: "NEWS",
+                type: "RELEASE",
                 title: "",
                 url: "not-a-url",
                 confidence: 2.0,
@@ -185,7 +223,7 @@ describe("createOpenAIContentExtractor", () => {
 
       const results = await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 
@@ -204,7 +242,7 @@ describe("createOpenAIContentExtractor", () => {
 
       const results = await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 
@@ -214,7 +252,7 @@ describe("createOpenAIContentExtractor", () => {
     it("handles JSON wrapped in markdown code fences", async () => {
       const items = [
         {
-          type: "NEWS",
+          type: "RELEASE",
           title: "Fenced Item",
           url: "https://example.com/fenced",
           publishedAt: "2025-06-15",
@@ -231,7 +269,7 @@ describe("createOpenAIContentExtractor", () => {
 
       const results = await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 
@@ -242,7 +280,7 @@ describe("createOpenAIContentExtractor", () => {
     it("extracts text from nested output array when output_text is null", async () => {
       const items = [
         {
-          type: "NEWS",
+          type: "RELEASE",
           title: "Nested Item",
           url: "https://example.com/nested",
           publishedAt: "2025-06-15",
@@ -271,7 +309,7 @@ describe("createOpenAIContentExtractor", () => {
 
       const results = await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 
@@ -288,7 +326,7 @@ describe("createOpenAIContentExtractor", () => {
 
       const results = await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 
@@ -304,7 +342,7 @@ describe("createOpenAIContentExtractor", () => {
 
       const results = await extractor.extract({
         artistName: "Radiohead",
-        type: "NEWS",
+        type: "RELEASE",
         since: new Date("2025-06-01"),
       });
 

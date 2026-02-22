@@ -12,7 +12,7 @@ let itemCounter = 0;
 function makeItem(overrides: Record<string, unknown> = {}) {
   itemCounter++;
   const id = (overrides.id as string) ?? `ci${itemCounter}`;
-  const type = (overrides.type as string) ?? "NEWS";
+  const type = (overrides.type as string) ?? "RELEASE";
   const artistId = (overrides.artistId as string) ?? "a1";
   const url =
     (overrides.url as string) ?? `https://example.com/item/${itemCounter}`;
@@ -28,7 +28,6 @@ function makeItem(overrides: Record<string, unknown> = {}) {
     publishedAt: (overrides.publishedAt as Date) ?? new Date("2025-06-01"),
     createdAt: new Date("2025-06-01"),
     ...overrides,
-    // recompute hash if overrides changed key fields
   };
 }
 
@@ -81,8 +80,8 @@ describe("feed repository", () => {
     });
   });
 
-  it("returns NEWS and RELEASE items for followed artists", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
+  it("returns RELEASE items for followed artists", () => {
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
     insertContentItem(db, makeItem({ artistId: "a2", type: "RELEASE" }));
 
     const items = findFeedItems(db, "u1");
@@ -90,34 +89,21 @@ describe("feed repository", () => {
   });
 
   it("excludes EVENT-type items", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
     insertContentItem(db, makeItem({ artistId: "a1", type: "EVENT" }));
 
     const items = findFeedItems(db, "u1");
     expect(items).toHaveLength(1);
-    expect(items[0].type).toBe("NEWS");
+    expect(items[0].type).toBe("RELEASE");
   });
 
   it("excludes items from unfollowed artists", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
-    insertContentItem(db, makeItem({ artistId: "a3", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
+    insertContentItem(db, makeItem({ artistId: "a3", type: "RELEASE" }));
 
     const items = findFeedItems(db, "u1");
     expect(items).toHaveLength(1);
     expect(items[0].artistId).toBe("a1");
-  });
-
-  it("filters by type when specified", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
-    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
-
-    const news = findFeedItems(db, "u1", { type: "NEWS" });
-    expect(news).toHaveLength(1);
-    expect(news[0].type).toBe("NEWS");
-
-    const releases = findFeedItems(db, "u1", { type: "RELEASE" });
-    expect(releases).toHaveLength(1);
-    expect(releases[0].type).toBe("RELEASE");
   });
 
   it("orders by publishedAt descending", () => {
@@ -125,7 +111,7 @@ describe("feed repository", () => {
       db,
       makeItem({
         artistId: "a1",
-        type: "NEWS",
+        type: "RELEASE",
         publishedAt: new Date("2025-06-01"),
       }),
     );
@@ -133,7 +119,7 @@ describe("feed repository", () => {
       db,
       makeItem({
         artistId: "a1",
-        type: "NEWS",
+        type: "RELEASE",
         publishedAt: new Date("2025-07-01"),
       }),
     );
@@ -150,7 +136,7 @@ describe("feed repository", () => {
         db,
         makeItem({
           artistId: "a1",
-          type: "NEWS",
+          type: "RELEASE",
           publishedAt: new Date(`2025-06-0${i + 1}`),
         }),
       );
@@ -166,7 +152,7 @@ describe("feed repository", () => {
   });
 
   it("returns empty array when user has no follows", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
 
     const items = findFeedItems(db, "u2");
     expect(items).toEqual([]);
@@ -178,8 +164,8 @@ describe("feed repository", () => {
   });
 
   it("filters by artistIds when specified", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
-    insertContentItem(db, makeItem({ artistId: "a2", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
+    insertContentItem(db, makeItem({ artistId: "a2", type: "RELEASE" }));
 
     const items = findFeedItems(db, "u1", { artistIds: ["a1"] });
     expect(items).toHaveLength(1);
@@ -187,15 +173,15 @@ describe("feed repository", () => {
   });
 
   it("returns items for multiple artistIds", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
-    insertContentItem(db, makeItem({ artistId: "a2", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
+    insertContentItem(db, makeItem({ artistId: "a2", type: "RELEASE" }));
 
     const items = findFeedItems(db, "u1", { artistIds: ["a1", "a2"] });
     expect(items).toHaveLength(2);
   });
 
   it("includes artistName in results", () => {
-    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
 
     const items = findFeedItems(db, "u1");
     expect(items[0].artistName).toBe("Radiohead");

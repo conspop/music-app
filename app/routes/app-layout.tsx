@@ -66,7 +66,6 @@ export default function AppLayout() {
           </span>
 
           <nav className="flex gap-1">
-            <TabLink to="/news">News</TabLink>
             <TabLink to="/releases">Releases</TabLink>
             <TabLink to="/events">Events</TabLink>
           </nav>

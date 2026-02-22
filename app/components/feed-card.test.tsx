@@ -4,7 +4,7 @@ import { FeedCard } from "./feed-card";
 
 const mockItem = {
   id: "1",
-  type: "NEWS" as const,
+  type: "RELEASE" as const,
   artistId: "a1",
   artistName: "Radiohead",
   title: "Radiohead announces new album",

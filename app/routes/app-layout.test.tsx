@@ -56,10 +56,6 @@ describe("AppLayout", () => {
 
   it("renders navigation tabs", () => {
     render(<AppLayout />);
-    expect(screen.getByRole("link", { name: /news/i })).toHaveAttribute(
-      "href",
-      "/news",
-    );
     expect(screen.getByRole("link", { name: /releases/i })).toHaveAttribute(
       "href",
       "/releases",
@@ -68,6 +64,11 @@ describe("AppLayout", () => {
       "href",
       "/events",
     );
+  });
+
+  it("does not render a news tab", () => {
+    render(<AppLayout />);
+    expect(screen.queryByRole("link", { name: /^news$/i })).not.toBeInTheDocument();
   });
 
   it("renders artists link", () => {
@@ -92,10 +93,6 @@ describe("AppLayout", () => {
     mockSearchParams.current = new URLSearchParams("artists=a1,a2");
 
     render(<AppLayout />);
-    expect(screen.getByRole("link", { name: /news/i })).toHaveAttribute(
-      "href",
-      "/news?artists=a1,a2",
-    );
     expect(screen.getByRole("link", { name: /releases/i })).toHaveAttribute(
       "href",
       "/releases?artists=a1,a2",

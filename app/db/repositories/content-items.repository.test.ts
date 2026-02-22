@@ -14,16 +14,16 @@ import { computeDedupeHash } from "~/db/dedupe";
 function makeItem(overrides: Record<string, unknown> = {}) {
   return {
     id: "ci1",
-    type: "NEWS" as const,
+    type: "RELEASE" as const,
     artistId: "a1",
     title: "New Album Announced",
-    url: "https://example.com/news/1",
-    summary: "Exciting news",
+    url: "https://example.com/release/1",
+    summary: "Exciting release",
     confidence: 0.95,
     dedupeHash: computeDedupeHash(
-      "NEWS",
+      "RELEASE",
       "a1",
-      "https://example.com/news/1",
+      "https://example.com/release/1",
     ),
     publishedAt: new Date("2025-06-01"),
     createdAt: new Date("2025-06-01"),
@@ -54,7 +54,7 @@ describe("content-items repository", () => {
 
       expect(item).toMatchObject({
         id: "ci1",
-        type: "NEWS",
+        type: "RELEASE",
         artistId: "a1",
         title: "New Album Announced",
       });
@@ -71,16 +71,16 @@ describe("content-items repository", () => {
     it("allows same URL with different type (different hash)", () => {
       insertContentItem(db, makeItem());
 
-      const releaseItem = makeItem({
+      const eventItem = makeItem({
         id: "ci2",
-        type: "RELEASE",
+        type: "EVENT",
         dedupeHash: computeDedupeHash(
-          "RELEASE",
+          "EVENT",
           "a1",
-          "https://example.com/news/1",
+          "https://example.com/release/1",
         ),
       });
-      const inserted = insertContentItem(db, releaseItem);
+      const inserted = insertContentItem(db, eventItem);
       expect(inserted.id).toBe("ci2");
     });
   });
@@ -93,11 +93,11 @@ describe("content-items repository", () => {
         makeItem({
           id: "ci2",
           artistId: "a2",
-          url: "https://example.com/news/2",
+          url: "https://example.com/release/2",
           dedupeHash: computeDedupeHash(
-            "NEWS",
+            "RELEASE",
             "a2",
-            "https://example.com/news/2",
+            "https://example.com/release/2",
           ),
         }),
       );
@@ -115,23 +115,23 @@ describe("content-items repository", () => {
         db,
         makeItem({
           id: "ci2",
-          type: "RELEASE",
-          url: "https://example.com/release/1",
+          type: "EVENT",
+          url: "https://example.com/event/1",
           dedupeHash: computeDedupeHash(
-            "RELEASE",
+            "EVENT",
             "a1",
-            "https://example.com/release/1",
+            "https://example.com/event/1",
           ),
         }),
       );
 
-      const news = findContentItemsByType(db, "NEWS");
-      expect(news).toHaveLength(1);
-      expect(news[0].type).toBe("NEWS");
-
       const releases = findContentItemsByType(db, "RELEASE");
       expect(releases).toHaveLength(1);
       expect(releases[0].type).toBe("RELEASE");
+
+      const events = findContentItemsByType(db, "EVENT");
+      expect(events).toHaveLength(1);
+      expect(events[0].type).toBe("EVENT");
     });
   });
 
@@ -148,11 +148,11 @@ describe("content-items repository", () => {
         db,
         makeItem({
           id: "ci2",
-          url: "https://example.com/news/2",
+          url: "https://example.com/release/2",
           dedupeHash: computeDedupeHash(
-            "NEWS",
+            "RELEASE",
             "a1",
-            "https://example.com/news/2",
+            "https://example.com/release/2",
           ),
           publishedAt: new Date("2025-07-15"),
         }),
@@ -161,11 +161,11 @@ describe("content-items repository", () => {
         db,
         makeItem({
           id: "ci3",
-          url: "https://example.com/news/3",
+          url: "https://example.com/release/3",
           dedupeHash: computeDedupeHash(
-            "NEWS",
+            "RELEASE",
             "a1",
-            "https://example.com/news/3",
+            "https://example.com/release/3",
           ),
           publishedAt: new Date("2025-08-30"),
         }),

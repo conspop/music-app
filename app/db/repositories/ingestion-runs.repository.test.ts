@@ -24,7 +24,7 @@ describe("ingestion-runs repository", () => {
       const run = insertIngestionRun(db, {
         id: "r1",
         artistId: "a1",
-        type: "NEWS",
+        type: "RELEASE",
         ranAt: new Date("2025-06-01T02:00:00Z"),
         itemsFound: 5,
       });
@@ -32,7 +32,7 @@ describe("ingestion-runs repository", () => {
       expect(run).toMatchObject({
         id: "r1",
         artistId: "a1",
-        type: "NEWS",
+        type: "RELEASE",
         itemsFound: 5,
       });
     });
@@ -43,19 +43,19 @@ describe("ingestion-runs repository", () => {
       insertIngestionRun(db, {
         id: "r1",
         artistId: "a1",
-        type: "NEWS",
+        type: "RELEASE",
         ranAt: new Date("2025-06-01T02:00:00Z"),
         itemsFound: 3,
       });
       insertIngestionRun(db, {
         id: "r2",
         artistId: "a1",
-        type: "NEWS",
+        type: "RELEASE",
         ranAt: new Date("2025-06-02T02:00:00Z"),
         itemsFound: 7,
       });
 
-      const last = findLastIngestionRun(db, "a1", "NEWS");
+      const last = findLastIngestionRun(db, "a1", "RELEASE");
       expect(last).toMatchObject({ id: "r2", itemsFound: 7 });
     });
 
@@ -63,24 +63,24 @@ describe("ingestion-runs repository", () => {
       insertIngestionRun(db, {
         id: "r1",
         artistId: "a1",
-        type: "NEWS",
+        type: "RELEASE",
         ranAt: new Date("2025-06-02T02:00:00Z"),
         itemsFound: 3,
       });
       insertIngestionRun(db, {
         id: "r2",
         artistId: "a1",
-        type: "RELEASE",
+        type: "EVENT",
         ranAt: new Date("2025-06-01T02:00:00Z"),
         itemsFound: 1,
       });
 
-      const lastRelease = findLastIngestionRun(db, "a1", "RELEASE");
-      expect(lastRelease).toMatchObject({ id: "r2", type: "RELEASE" });
+      const lastEvent = findLastIngestionRun(db, "a1", "EVENT");
+      expect(lastEvent).toMatchObject({ id: "r2", type: "EVENT" });
     });
 
     it("returns undefined when no runs exist", () => {
-      const last = findLastIngestionRun(db, "a1", "NEWS");
+      const last = findLastIngestionRun(db, "a1", "RELEASE");
       expect(last).toBeUndefined();
     });
   });

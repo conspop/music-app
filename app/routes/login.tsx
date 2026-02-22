@@ -14,7 +14,7 @@ export default function Login() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Music App</h1>
           <p className="text-muted-foreground">
-            Follow your favorite artists. Get nightly updates on news, releases,
+            Follow your favorite artists. Get nightly updates on releases
             and nearby concerts.
           </p>
         </div>

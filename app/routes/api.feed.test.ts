@@ -27,7 +27,7 @@ let itemCounter = 0;
 function makeItem(overrides: Record<string, unknown> = {}) {
   itemCounter++;
   const id = (overrides.id as string) ?? `ci${itemCounter}`;
-  const type = (overrides.type as string) ?? "NEWS";
+  const type = (overrides.type as string) ?? "RELEASE";
   const artistId = (overrides.artistId as string) ?? "a1";
   const url =
     (overrides.url as string) ?? `https://example.com/item/${itemCounter}`;
@@ -95,24 +95,22 @@ describe("api/feed", () => {
     return loader({ request, params: {}, context: {} } as any);
   }
 
-  it("returns feed items for followed artists", async () => {
-    insertContentItem(db, makeItem({ type: "NEWS" }));
+  it("returns release items for followed artists", async () => {
     insertContentItem(db, makeItem({ type: "RELEASE" }));
 
     const request = await authedRequest("http://localhost/api/feed");
     const response = await callLoader(request);
     const body = await response.json();
 
-    expect(body.items).toHaveLength(2);
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].type).toBe("RELEASE");
   });
 
-  it("filters by type query param", async () => {
-    insertContentItem(db, makeItem({ type: "NEWS" }));
+  it("excludes EVENT items from feed", async () => {
     insertContentItem(db, makeItem({ type: "RELEASE" }));
+    insertContentItem(db, makeItem({ type: "EVENT" }));
 
-    const request = await authedRequest(
-      "http://localhost/api/feed?type=RELEASE",
-    );
+    const request = await authedRequest("http://localhost/api/feed");
     const response = await callLoader(request);
     const body = await response.json();
 
@@ -125,7 +123,7 @@ describe("api/feed", () => {
       insertContentItem(
         db,
         makeItem({
-          type: "NEWS",
+          type: "RELEASE",
           publishedAt: new Date(`2025-06-0${i + 1}`),
         }),
       );

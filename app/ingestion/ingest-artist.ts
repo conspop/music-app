@@ -6,9 +6,9 @@ import {
 } from "~/db/repositories/content-items.repository";
 import {
   insertIngestionRun,
-  findLastIngestionRun,
 } from "~/db/repositories/ingestion-runs.repository";
 import type { ContentExtractor } from "./content-extractor";
+import type { ReleaseProvider } from "./release-provider";
 import type { IngestionConfig } from "./config";
 import { CONTENT_TYPES, type ContentType, type ExtractedItem } from "./types";
 
@@ -22,6 +22,7 @@ function safeDate(value: string | undefined): Date | null {
 export interface IngestArtistDeps {
   db: DrizzleDb;
   contentExtractor: ContentExtractor;
+  releaseProvider?: ReleaseProvider;
   config: IngestionConfig;
   artist: { id: string; name: string };
 }
@@ -33,27 +34,15 @@ export interface IngestArtistResult {
   errors: number;
 }
 
-function getSinceDate(
-  db: DrizzleDb,
-  artistId: string,
-  type: ContentType,
-  backfillDays: number,
-): Date {
+function getSinceDate(type: ContentType): Date {
   if (type === "RELEASE") {
     const d = new Date();
     d.setFullYear(d.getFullYear() - 1);
     return d;
   }
 
-  if (type === "EVENT") {
-    return new Date();
-  }
-
-  const lastRun = findLastIngestionRun(db, artistId, type);
-  if (lastRun) return lastRun.ranAt;
-
-  const now = Date.now();
-  return new Date(now - backfillDays * 24 * 60 * 60 * 1000);
+  // EVENT: from today onwards
+  return new Date();
 }
 
 function processItems(
@@ -115,10 +104,49 @@ function processItems(
   return { inserted, skippedDupes, skippedLowConfidence };
 }
 
+async function fetchItemsForType(
+  deps: IngestArtistDeps,
+  type: ContentType,
+  since: Date,
+): Promise<ExtractedItem[]> {
+  const { contentExtractor, releaseProvider, artist } = deps;
+  const tag = `[ingest:${type}:${artist.name}]`;
+
+  if (type === "RELEASE" && releaseProvider) {
+    let providerItems: ExtractedItem[] = [];
+    try {
+      providerItems = await releaseProvider.fetchReleases(artist.name);
+      console.log(`${tag} ${providerItems.length} items from Spotify`);
+    } catch (err) {
+      console.error(`${tag} Spotify provider threw:`, err);
+    }
+
+    let aiItems: ExtractedItem[] = [];
+    try {
+      aiItems = await contentExtractor.extract({
+        artistName: artist.name,
+        type,
+        since,
+      });
+      console.log(`${tag} ${aiItems.length} items from OpenAI`);
+    } catch (err) {
+      console.error(`${tag} OpenAI extraction threw:`, err);
+    }
+
+    return [...providerItems, ...aiItems];
+  }
+
+  return contentExtractor.extract({
+    artistName: artist.name,
+    type,
+    since,
+  });
+}
+
 export async function ingestArtist(
   deps: IngestArtistDeps,
 ): Promise<IngestArtistResult> {
-  const { db, contentExtractor, config, artist } = deps;
+  const { db, config, artist } = deps;
   const totals: IngestArtistResult = {
     inserted: 0,
     skippedDupes: 0,
@@ -127,24 +155,20 @@ export async function ingestArtist(
   };
 
   for (const type of CONTENT_TYPES) {
-    const since = getSinceDate(db, artist.id, type, config.BACKFILL_DAYS);
+    const since = getSinceDate(type);
     const tag = `[ingest:${type}:${artist.name}]`;
     console.log(`${tag} since=${since.toISOString().slice(0, 10)}`);
 
     let items: ExtractedItem[];
     try {
-      items = await contentExtractor.extract({
-        artistName: artist.name,
-        type,
-        since,
-      });
+      items = await fetchItemsForType(deps, type, since);
     } catch (err) {
       console.error(`${tag} extraction threw:`, err);
       totals.errors++;
       continue;
     }
 
-    console.log(`${tag} ${items.length} items from extractor`);
+    console.log(`${tag} ${items.length} items total`);
 
     const result = processItems(db, artist.id, type, items, config);
     totals.inserted += result.inserted;

@@ -1,12 +1,14 @@
 import type { DrizzleDb } from "~/db/connection";
 import { findFollowedArtists } from "~/db/repositories/follows.repository";
 import type { ContentExtractor } from "./content-extractor";
+import type { ReleaseProvider } from "./release-provider";
 import type { IngestionConfig } from "./config";
 import { ingestArtist } from "./ingest-artist";
 
 export interface IngestionDeps {
   db: DrizzleDb;
   contentExtractor: ContentExtractor;
+  releaseProvider?: ReleaseProvider;
   config: IngestionConfig;
 }
 
@@ -19,7 +21,7 @@ export interface IngestionSummary {
 }
 
 export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummary> {
-  const { db, contentExtractor, config } = deps;
+  const { db, contentExtractor, releaseProvider, config } = deps;
 
   const artists = findFollowedArtists(db);
   const capped = artists.slice(0, config.MAX_ARTISTS_PER_RUN);
@@ -27,6 +29,7 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
   console.log(
     `[ingestion] starting run for ${capped.length} artist(s): ${capped.map((a) => a.name).join(", ")}`,
   );
+  if (releaseProvider) console.log("[ingestion] Spotify release provider active");
 
   const summary: IngestionSummary = {
     artistsProcessed: 0,
@@ -42,6 +45,7 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
     const result = await ingestArtist({
       db,
       contentExtractor,
+      releaseProvider,
       config,
       artist,
     });

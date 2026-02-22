@@ -4,8 +4,8 @@ import { createTestDb } from "../../tests/db-helpers";
 import { insertArtist } from "~/db/repositories/artists.repository";
 import { findContentItemsByArtist } from "~/db/repositories/content-items.repository";
 import { findLastIngestionRun } from "~/db/repositories/ingestion-runs.repository";
-import { insertIngestionRun } from "~/db/repositories/ingestion-runs.repository";
 import type { ContentExtractor } from "./content-extractor";
+import type { ReleaseProvider } from "./release-provider";
 import type { ExtractedItem } from "./types";
 import { INGESTION_CONFIG } from "./config";
 import { ingestArtist } from "./ingest-artist";
@@ -32,17 +32,8 @@ describe("ingestArtist", () => {
     });
   });
 
-  it("extracts and inserts items for all three content types", async () => {
+  it("extracts and inserts items for both content types", async () => {
     const extractor = fakeExtractor({
-      NEWS: [
-        {
-          type: "NEWS",
-          title: "Tour Announced",
-          url: "https://example.com/news/1",
-          publishedAt: "2025-06-01",
-          confidence: 0.9,
-        },
-      ],
       RELEASE: [
         {
           type: "RELEASE",
@@ -73,22 +64,21 @@ describe("ingestArtist", () => {
     });
 
     const items = findContentItemsByArtist(db, "a1");
-    expect(items).toHaveLength(3);
-    expect(result.inserted).toBe(3);
+    expect(items).toHaveLength(2);
+    expect(result.inserted).toBe(2);
   });
 
   it("records an ingestion run per type", async () => {
     const extractor = fakeExtractor({
-      NEWS: [
+      RELEASE: [
         {
-          type: "NEWS",
-          title: "Article",
-          url: "https://example.com/n/1",
+          type: "RELEASE",
+          title: "Album",
+          url: "https://example.com/r/1",
           publishedAt: "2025-06-01",
           confidence: 0.9,
         },
       ],
-      RELEASE: [],
       EVENT: [],
     });
 
@@ -99,37 +89,33 @@ describe("ingestArtist", () => {
       artist: { id: "a1", name: "Radiohead" },
     });
 
-    const newsRun = findLastIngestionRun(db, "a1", "NEWS");
     const releaseRun = findLastIngestionRun(db, "a1", "RELEASE");
     const eventRun = findLastIngestionRun(db, "a1", "EVENT");
 
-    expect(newsRun).toBeDefined();
-    expect(newsRun!.itemsFound).toBe(1);
     expect(releaseRun).toBeDefined();
-    expect(releaseRun!.itemsFound).toBe(0);
+    expect(releaseRun!.itemsFound).toBe(1);
     expect(eventRun).toBeDefined();
     expect(eventRun!.itemsFound).toBe(0);
   });
 
   it("filters out items below MIN_CONFIDENCE", async () => {
     const extractor = fakeExtractor({
-      NEWS: [
+      RELEASE: [
         {
-          type: "NEWS",
+          type: "RELEASE",
           title: "High Confidence",
-          url: "https://example.com/n/high",
+          url: "https://example.com/r/high",
           publishedAt: "2025-06-01",
           confidence: 0.9,
         },
         {
-          type: "NEWS",
+          type: "RELEASE",
           title: "Low Confidence",
-          url: "https://example.com/n/low",
+          url: "https://example.com/r/low",
           publishedAt: "2025-06-01",
           confidence: 0.3,
         },
       ],
-      RELEASE: [],
       EVENT: [],
     });
 
@@ -148,16 +134,15 @@ describe("ingestArtist", () => {
   });
 
   it("skips duplicate items via dedupe hash", async () => {
-    const newsItem: ExtractedItem = {
-      type: "NEWS",
-      title: "Same Article",
-      url: "https://example.com/n/same",
+    const releaseItem: ExtractedItem = {
+      type: "RELEASE",
+      title: "Same Album",
+      url: "https://example.com/r/same",
       publishedAt: "2025-06-01",
       confidence: 0.9,
     };
     const extractor = fakeExtractor({
-      NEWS: [newsItem],
-      RELEASE: [],
+      RELEASE: [releaseItem],
       EVENT: [],
     });
 
@@ -179,59 +164,6 @@ describe("ingestArtist", () => {
     expect(items).toHaveLength(1);
     expect(result.inserted).toBe(0);
     expect(result.skippedDupes).toBe(1);
-  });
-
-  it("uses 30-day backfill for NEWS when no prior ingestion run exists", async () => {
-    const capturedSinces: Record<string, Date> = {};
-    const extractor: ContentExtractor = {
-      async extract({ type, since }) {
-        capturedSinces[type] = since;
-        return [];
-      },
-    };
-
-    const now = new Date("2025-07-15T12:00:00Z");
-    vi.setSystemTime(now);
-
-    await ingestArtist({
-      db,
-      contentExtractor: extractor,
-      config: INGESTION_CONFIG,
-      artist: { id: "a1", name: "Radiohead" },
-    });
-
-    vi.useRealTimers();
-
-    const expectedNewsSince = new Date("2025-06-15T12:00:00Z");
-    expect(capturedSinces["NEWS"]!.getTime()).toBe(expectedNewsSince.getTime());
-  });
-
-  it("uses last ingestion run date for incremental NEWS extraction", async () => {
-    const lastRunDate = new Date("2025-07-01");
-    insertIngestionRun(db, {
-      id: "run-1",
-      artistId: "a1",
-      type: "NEWS",
-      ranAt: lastRunDate,
-      itemsFound: 5,
-    });
-
-    const capturedSinces: Record<string, Date> = {};
-    const extractor: ContentExtractor = {
-      async extract({ type, since }) {
-        capturedSinces[type] = since;
-        return [];
-      },
-    };
-
-    await ingestArtist({
-      db,
-      contentExtractor: extractor,
-      config: INGESTION_CONFIG,
-      artist: { id: "a1", name: "Radiohead" },
-    });
-
-    expect(capturedSinces["NEWS"]).toEqual(lastRunDate);
   });
 
   it("uses 1-year window for RELEASE and today for EVENT", async () => {
@@ -264,16 +196,15 @@ describe("ingestArtist", () => {
 
   it("caps items per type at MAX_ITEMS_PER_TYPE", async () => {
     const manyItems: ExtractedItem[] = Array.from({ length: 30 }, (_, i) => ({
-      type: "NEWS" as const,
-      title: `Article ${i}`,
-      url: `https://example.com/n/${i}`,
+      type: "RELEASE" as const,
+      title: `Album ${i}`,
+      url: `https://example.com/r/${i}`,
       publishedAt: "2025-06-01",
       confidence: 0.9,
     }));
 
     const extractor = fakeExtractor({
-      NEWS: manyItems,
-      RELEASE: [],
+      RELEASE: manyItems,
       EVENT: [],
     });
 
@@ -289,28 +220,76 @@ describe("ingestArtist", () => {
     expect(result.inserted).toBe(5);
   });
 
-  it("handles items without a URL gracefully (skips them)", async () => {
+  it("merges releases from Spotify provider and OpenAI, deduping by URL", async () => {
+    const spotifyRelease: ExtractedItem = {
+      type: "RELEASE",
+      title: "Spotify Album",
+      url: "https://open.spotify.com/album/1",
+      publishedAt: "2025-06-01",
+      confidence: 1.0,
+    };
+    const aiRelease: ExtractedItem = {
+      type: "RELEASE",
+      title: "AI Found Album",
+      url: "https://example.com/release/2",
+      publishedAt: "2025-07-01",
+      confidence: 0.85,
+    };
+    const duplicateRelease: ExtractedItem = {
+      type: "RELEASE",
+      title: "Spotify Album (AI duplicate)",
+      url: "https://open.spotify.com/album/1",
+      publishedAt: "2025-06-01",
+      confidence: 0.8,
+    };
+
+    const releaseProvider: ReleaseProvider = {
+      async fetchReleases() { return [spotifyRelease]; },
+    };
     const extractor = fakeExtractor({
-      NEWS: [
-        {
-          type: "NEWS",
-          title: "No URL Item",
-          url: "https://example.com/valid",
-          publishedAt: "2025-06-01",
-          confidence: 0.9,
-        },
-      ],
-      RELEASE: [],
+      RELEASE: [aiRelease, duplicateRelease],
       EVENT: [],
     });
 
     const result = await ingestArtist({
       db,
       contentExtractor: extractor,
+      releaseProvider,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Radiohead" },
+    });
+
+    expect(result.inserted).toBe(2);
+    expect(result.skippedDupes).toBe(1);
+  });
+
+  it("falls back to OpenAI when release provider throws", async () => {
+    const releaseProvider: ReleaseProvider = {
+      async fetchReleases() { throw new Error("Spotify down"); },
+    };
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "AI Fallback",
+          url: "https://example.com/release/ai",
+          publishedAt: "2025-06-01",
+          confidence: 0.85,
+        },
+      ],
+      EVENT: [],
+    });
+
+    const result = await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
 
     expect(result.inserted).toBe(1);
+    const items = findContentItemsByArtist(db, "a1");
+    expect(items[0].title).toBe("AI Fallback");
   });
 });

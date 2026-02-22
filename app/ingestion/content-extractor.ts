@@ -16,21 +16,25 @@ export interface ContentExtractor {
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
 function buildPrompt(artistName: string, type: ContentType, since: Date): string {
-  const sinceStr = since.toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
-
-  const sixMonthsOut = new Date();
-  sixMonthsOut.setMonth(sixMonthsOut.getMonth() + 6);
-  const untilStr = sixMonthsOut.toISOString().slice(0, 10);
 
   const oneYearAgo = new Date();
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const yearAgoStr = oneYearAgo.toISOString().slice(0, 10);
 
   const typeInstructions: Record<ContentType, string> = {
-    NEWS: `Search the web for recent news articles, interviews, and announcements about the music artist "${artistName}" published since ${sinceStr}. For each item return: title, url, summary, imageUrl (optional), publishedAt (YYYY-MM-DD), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
-    RELEASE: `Search the web for music releases (albums, singles, EPs, music videos) by the artist "${artistName}" released since ${yearAgoStr} or upcoming future releases. Include anything released in the past year or announced for release in the future. For each item return: title, url, summary, imageUrl (optional), publishedAt (YYYY-MM-DD), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
-    EVENT: `Search the web for upcoming concerts, festivals, and live performances by the artist "${artistName}" taking place between ${today} and ${untilStr}. Only include events with dates in the next 6 months. For each item return: title, url, summary, eventDate (YYYY-MM-DD), eventVenue, eventCity, eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+    RELEASE: `Find music releases by the artist "${artistName}". Today is ${today}.
+
+Search for:
+1. Upcoming releases — albums, singles, EPs, or music videos announced for release in the future or in the past 2 weeks. These are the highest priority.
+2. Recent releases — anything released since ${yearAgoStr} that is noteworthy (debut albums, major singles, collaborations).
+
+For each item return: title, url, summary, imageUrl (optional), publishedAt (YYYY-MM-DD — use the release date, not the announcement date), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+    EVENT: `Find upcoming concerts, shows, and live performances for the artist "${artistName}". Today is ${today}.
+
+Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: check event listings, venue calendars, and multi-artist shows in addition to the artist's own tour page.
+
+For each event found return: title, url, summary, eventDate (YYYY-MM-DD), eventVenue, eventCity, eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
   };
 
   return `${typeInstructions[type]}
@@ -72,6 +76,13 @@ export function createOpenAIContentExtractor(apiKey: string): ContentExtractor {
       const tag = `[extract:${type}:${artistName}]`;
       console.log(`${tag} requesting since=${since.toISOString().slice(0, 10)}`);
 
+      const reqBody = {
+        model: "o4-mini",
+        input: buildPrompt(artistName, type, since),
+        tools: [{ type: "web_search_preview", search_context_size: "high" }],
+      };
+      console.log(`${tag} model=${reqBody.model}`);
+
       let response: Response;
       try {
         response = await fetch(OPENAI_RESPONSES_URL, {
@@ -80,13 +91,7 @@ export function createOpenAIContentExtractor(apiKey: string): ContentExtractor {
             "Content-Type": "application/json",
             Authorization: `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            instructions:
-              "You are a music industry research assistant. You return structured JSON data only. No markdown, no explanation — just the JSON array.",
-            input: buildPrompt(artistName, type, since),
-            tools: [{ type: "web_search" }],
-          }),
+          body: JSON.stringify(reqBody),
         });
       } catch (err) {
         console.error(`${tag} fetch failed:`, err);

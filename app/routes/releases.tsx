@@ -17,7 +17,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   const artistIds = url.searchParams.get("artists")?.split(",").filter(Boolean);
   const items = findFeedItems(ctx.db, user.id, {
-    type: "RELEASE",
     ...(artistIds?.length ? { artistIds } : {}),
   });
   return { items };
