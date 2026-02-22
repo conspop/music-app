@@ -21,4 +21,5 @@ export default [
   route("api/follows", "routes/api.follows.tsx"),
   route("api/feed", "routes/api.feed.tsx"),
   route("api/upcoming", "routes/api.upcoming.tsx"),
+  route("api/ingest", "routes/api.ingest.tsx"),
 ] satisfies RouteConfig;

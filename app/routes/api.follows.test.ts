@@ -32,6 +32,7 @@ describe("api/follows", () => {
       db,
       sessions,
       authProvider: {} as any,
+      contentExtractor: {} as any,
     });
 
     insertUser(db, {

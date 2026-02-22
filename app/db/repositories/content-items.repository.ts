@@ -2,6 +2,14 @@ import { and, eq, gte, lte } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
 import { contentItems } from "~/db/schema";
 
+export function findContentItemByDedupeHash(db: DrizzleDb, hash: string) {
+  return db
+    .select()
+    .from(contentItems)
+    .where(eq(contentItems.dedupeHash, hash))
+    .get();
+}
+
 export function insertContentItem(
   db: DrizzleDb,
   data: typeof contentItems.$inferInsert,

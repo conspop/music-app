@@ -9,6 +9,7 @@ import {
   findFollowsByUser,
   findFollowsByArtist,
   findFollowsWithArtists,
+  findFollowedArtists,
 } from "./follows.repository";
 
 describe("follows repository", () => {
@@ -190,6 +191,76 @@ describe("follows repository", () => {
       const results = findFollowsWithArtists(db, "u1");
       expect(results).toHaveLength(1);
       expect(results[0]).toMatchObject({ artistName: "Radiohead" });
+    });
+  });
+
+  describe("findFollowedArtists", () => {
+    it("returns distinct artists that have at least one follower", () => {
+      followArtist(db, {
+        id: "f1",
+        userId: "u1",
+        artistId: "a1",
+        createdAt: new Date("2025-01-01"),
+      });
+      followArtist(db, {
+        id: "f2",
+        userId: "u1",
+        artistId: "a2",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const results = findFollowedArtists(db);
+      expect(results).toHaveLength(2);
+      expect(results.map((a) => a.name).sort()).toEqual(["Bjork", "Radiohead"]);
+    });
+
+    it("returns each artist only once even with multiple followers", () => {
+      insertUser(db, {
+        id: "u2",
+        googleId: "g2",
+        email: "b@c.com",
+        name: "Other",
+        createdAt: new Date("2025-01-01"),
+      });
+      followArtist(db, {
+        id: "f1",
+        userId: "u1",
+        artistId: "a1",
+        createdAt: new Date("2025-01-01"),
+      });
+      followArtist(db, {
+        id: "f2",
+        userId: "u2",
+        artistId: "a1",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const results = findFollowedArtists(db);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({ id: "a1", name: "Radiohead" });
+    });
+
+    it("returns empty array when no artists are followed", () => {
+      const results = findFollowedArtists(db);
+      expect(results).toEqual([]);
+    });
+
+    it("does not return unfollowed artists", () => {
+      insertArtist(db, {
+        id: "a3",
+        name: "Portishead",
+        createdAt: new Date("2025-01-01"),
+      });
+      followArtist(db, {
+        id: "f1",
+        userId: "u1",
+        artistId: "a1",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const results = findFollowedArtists(db);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({ name: "Radiohead" });
     });
   });
 });

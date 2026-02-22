@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("react-router", async () => {
@@ -92,5 +93,87 @@ describe("Settings", () => {
 
     render(<Settings />);
     expect(screen.getByText("City is required")).toBeInTheDocument();
+  });
+
+  describe("ingestion trigger", () => {
+    it("renders a Run Ingestion button", () => {
+      mockUseLoaderData.mockReturnValue({ user: mockUser });
+
+      render(<Settings />);
+      expect(
+        screen.getByRole("button", { name: /run ingestion/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows summary after successful ingestion", async () => {
+      mockUseLoaderData.mockReturnValue({ user: mockUser });
+      const user = userEvent.setup();
+
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          summary: {
+            artistsProcessed: 3,
+            totalInserted: 12,
+            totalSkippedDupes: 2,
+            totalSkippedLowConfidence: 1,
+            totalErrors: 0,
+          },
+        }),
+      });
+
+      render(<Settings />);
+      await user.click(screen.getByRole("button", { name: /run ingestion/i }));
+
+      expect(await screen.findByText(/3 artists processed/i)).toBeInTheDocument();
+      expect(screen.getByText(/12 items inserted/i)).toBeInTheDocument();
+    });
+
+    it("shows error message when ingestion fails", async () => {
+      mockUseLoaderData.mockReturnValue({ user: mockUser });
+      const user = userEvent.setup();
+
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      });
+
+      render(<Settings />);
+      await user.click(screen.getByRole("button", { name: /run ingestion/i }));
+
+      expect(await screen.findByText(/ingestion failed/i)).toBeInTheDocument();
+    });
+
+    it("disables the button while ingestion is running", async () => {
+      mockUseLoaderData.mockReturnValue({ user: mockUser });
+      const user = userEvent.setup();
+
+      let resolvePromise: (value: unknown) => void;
+      global.fetch = vi.fn().mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolvePromise = resolve;
+        }),
+      );
+
+      render(<Settings />);
+      const button = screen.getByRole("button", { name: /run ingestion/i });
+      await user.click(button);
+
+      expect(button).toBeDisabled();
+      expect(button).toHaveTextContent(/running/i);
+
+      resolvePromise!({
+        ok: true,
+        json: async () => ({
+          summary: {
+            artistsProcessed: 0,
+            totalInserted: 0,
+            totalSkippedDupes: 0,
+            totalSkippedLowConfidence: 0,
+            totalErrors: 0,
+          },
+        }),
+      });
+    });
   });
 });

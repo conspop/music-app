@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import type { Route } from "./+types/settings";
 import { getAppContext } from "~/server/context";
@@ -6,6 +7,7 @@ import { updateUserLocation } from "~/db/repositories/users.repository";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import type { IngestionSummary } from "~/ingestion/orchestrator";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Settings — Music App" }];
@@ -78,6 +80,74 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 const RADIUS_OPTIONS = [10, 25, 50, 100, 200, 500];
+
+function IngestionTrigger() {
+  const [running, setRunning] = useState(false);
+  const [summary, setSummary] = useState<IngestionSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleRun() {
+    setRunning(true);
+    setSummary(null);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/ingest", { method: "POST" });
+      if (!response.ok) {
+        setError("Ingestion failed. Check the server logs for details.");
+        return;
+      }
+      const data = await response.json();
+      setSummary(data.summary);
+    } catch {
+      setError("Ingestion failed. Check the server logs for details.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Ingestion</h2>
+        <p className="text-sm text-muted-foreground">
+          Manually trigger the content ingestion pipeline for all followed
+          artists.
+        </p>
+      </div>
+
+      <Button onClick={handleRun} disabled={running} variant="outline">
+        {running ? "Running..." : "Run Ingestion"}
+      </Button>
+
+      {summary && (
+        <div className="rounded-md border p-3 text-sm space-y-1">
+          <p className="font-medium">
+            {summary.artistsProcessed} artists processed
+          </p>
+          <p>{summary.totalInserted} items inserted</p>
+          {summary.totalSkippedDupes > 0 && (
+            <p className="text-muted-foreground">
+              {summary.totalSkippedDupes} duplicates skipped
+            </p>
+          )}
+          {summary.totalSkippedLowConfidence > 0 && (
+            <p className="text-muted-foreground">
+              {summary.totalSkippedLowConfidence} low-confidence items skipped
+            </p>
+          )}
+          {summary.totalErrors > 0 && (
+            <p className="text-destructive">
+              {summary.totalErrors} errors encountered
+            </p>
+          )}
+        </div>
+      )}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
 
 export default function Settings() {
   const { user } = useLoaderData<typeof loader>();
@@ -185,6 +255,10 @@ export default function Settings() {
           {isSubmitting ? "Saving..." : "Save location"}
         </Button>
       </Form>
+
+      <hr className="border-border" />
+
+      <IngestionTrigger />
     </div>
   );
 }

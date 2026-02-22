@@ -2,6 +2,15 @@ import { and, eq, asc } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
 import { artists, follows } from "~/db/schema";
 
+export function findFollowedArtists(db: DrizzleDb) {
+  return db
+    .selectDistinct({ id: artists.id, name: artists.name })
+    .from(artists)
+    .innerJoin(follows, eq(artists.id, follows.artistId))
+    .orderBy(asc(artists.name))
+    .all();
+}
+
 export function followArtist(
   db: DrizzleDb,
   data: typeof follows.$inferInsert,

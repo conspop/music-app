@@ -30,6 +30,7 @@ describe("settings action", () => {
       db,
       sessions,
       authProvider: {} as never,
+      contentExtractor: {} as any,
     });
 
     insertUser(db, {

@@ -8,10 +8,15 @@ describe("getEnv", () => {
     process.env = { ...originalEnv };
   });
 
-  it("returns env vars when all are set", () => {
+  function setAllEnvVars() {
     process.env.GOOGLE_CLIENT_ID = "client-id";
     process.env.GOOGLE_CLIENT_SECRET = "client-secret";
     process.env.SESSION_SECRET = "session-secret";
+    process.env.OPENAI_API_KEY = "openai-key";
+  }
+
+  it("returns env vars when all are set", () => {
+    setAllEnvVars();
 
     const env = getEnv();
 
@@ -19,12 +24,12 @@ describe("getEnv", () => {
       GOOGLE_CLIENT_ID: "client-id",
       GOOGLE_CLIENT_SECRET: "client-secret",
       SESSION_SECRET: "session-secret",
+      OPENAI_API_KEY: "openai-key",
     });
   });
 
   it("throws when GOOGLE_CLIENT_ID is missing", () => {
-    process.env.GOOGLE_CLIENT_SECRET = "client-secret";
-    process.env.SESSION_SECRET = "session-secret";
+    setAllEnvVars();
     delete process.env.GOOGLE_CLIENT_ID;
 
     expect(() => getEnv()).toThrow(
@@ -33,8 +38,7 @@ describe("getEnv", () => {
   });
 
   it("throws when GOOGLE_CLIENT_SECRET is missing", () => {
-    process.env.GOOGLE_CLIENT_ID = "client-id";
-    process.env.SESSION_SECRET = "session-secret";
+    setAllEnvVars();
     delete process.env.GOOGLE_CLIENT_SECRET;
 
     expect(() => getEnv()).toThrow(
@@ -43,12 +47,20 @@ describe("getEnv", () => {
   });
 
   it("throws when SESSION_SECRET is missing", () => {
-    process.env.GOOGLE_CLIENT_ID = "client-id";
-    process.env.GOOGLE_CLIENT_SECRET = "client-secret";
+    setAllEnvVars();
     delete process.env.SESSION_SECRET;
 
     expect(() => getEnv()).toThrow(
       "Missing required environment variable: SESSION_SECRET",
+    );
+  });
+
+  it("throws when OPENAI_API_KEY is missing", () => {
+    setAllEnvVars();
+    delete process.env.OPENAI_API_KEY;
+
+    expect(() => getEnv()).toThrow(
+      "Missing required environment variable: OPENAI_API_KEY",
     );
   });
 });

@@ -63,6 +63,7 @@ describe("api/upcoming", () => {
       db,
       sessions,
       authProvider: {} as any,
+      contentExtractor: {} as any,
     });
 
     insertUser(db, {

@@ -7,6 +7,7 @@ import {
   findContentItemsByArtist,
   findContentItemsByType,
   findContentItemsByDateRange,
+  findContentItemByDedupeHash,
 } from "./content-items.repository";
 import { computeDedupeHash } from "~/db/dedupe";
 
@@ -188,6 +189,21 @@ describe("content-items repository", () => {
         new Date("2026-12-31"),
       );
       expect(results).toEqual([]);
+    });
+  });
+
+  describe("findContentItemByDedupeHash", () => {
+    it("returns the item when hash exists", () => {
+      const item = makeItem();
+      insertContentItem(db, item);
+
+      const found = findContentItemByDedupeHash(db, item.dedupeHash);
+      expect(found).toMatchObject({ id: "ci1", title: "New Album Announced" });
+    });
+
+    it("returns undefined when hash does not exist", () => {
+      const found = findContentItemByDedupeHash(db, "nonexistent-hash");
+      expect(found).toBeUndefined();
     });
   });
 });

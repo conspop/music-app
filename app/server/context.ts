@@ -2,11 +2,17 @@ import { getEnv } from "~/env.server";
 import { createDb } from "~/db/connection";
 import { createSessionStorage } from "~/auth/session.server";
 import { createGoogleAuthProvider } from "~/auth/google-auth-provider";
+import { createOpenAIContentExtractor } from "~/ingestion/content-extractor";
 import type { AuthDeps } from "~/auth/auth-handlers";
+import type { ContentExtractor } from "~/ingestion/content-extractor";
 
-let cached: AuthDeps | null = null;
+export interface AppContext extends AuthDeps {
+  contentExtractor: ContentExtractor;
+}
 
-export function getAppContext(): AuthDeps {
+let cached: AppContext | null = null;
+
+export function getAppContext(): AppContext {
   if (cached) return cached;
 
   const env = getEnv();
@@ -19,7 +25,8 @@ export function getAppContext(): AuthDeps {
       ? `${process.env.APP_URL}/auth/google/callback`
       : "http://localhost:5173/auth/google/callback",
   );
+  const contentExtractor = createOpenAIContentExtractor(env.OPENAI_API_KEY);
 
-  cached = { db, sessions, authProvider };
+  cached = { db, sessions, authProvider, contentExtractor };
   return cached;
 }
