@@ -8,6 +8,7 @@ import {
   unfollowArtist,
   findFollowsByUser,
   findFollowsByArtist,
+  findFollowsWithArtists,
 } from "./follows.repository";
 
 describe("follows repository", () => {
@@ -128,6 +129,67 @@ describe("follows repository", () => {
       const results = findFollowsByArtist(db, "a1");
       expect(results).toHaveLength(1);
       expect(results[0]).toMatchObject({ userId: "u1" });
+    });
+  });
+
+  describe("findFollowsWithArtists", () => {
+    it("returns follows joined with artist details, ordered by artist name", () => {
+      followArtist(db, {
+        id: "f1",
+        userId: "u1",
+        artistId: "a1",
+        createdAt: new Date("2025-01-01"),
+      });
+      followArtist(db, {
+        id: "f2",
+        userId: "u1",
+        artistId: "a2",
+        createdAt: new Date("2025-01-02"),
+      });
+
+      const results = findFollowsWithArtists(db, "u1");
+      expect(results).toHaveLength(2);
+      expect(results[0]).toMatchObject({
+        followId: "f2",
+        artistId: "a2",
+        artistName: "Bjork",
+      });
+      expect(results[1]).toMatchObject({
+        followId: "f1",
+        artistId: "a1",
+        artistName: "Radiohead",
+      });
+    });
+
+    it("returns empty array when user follows nobody", () => {
+      const results = findFollowsWithArtists(db, "u1");
+      expect(results).toEqual([]);
+    });
+
+    it("does not include follows from other users", () => {
+      insertUser(db, {
+        id: "u2",
+        googleId: "g2",
+        email: "b@c.com",
+        name: "Other",
+        createdAt: new Date("2025-01-01"),
+      });
+      followArtist(db, {
+        id: "f1",
+        userId: "u1",
+        artistId: "a1",
+        createdAt: new Date("2025-01-01"),
+      });
+      followArtist(db, {
+        id: "f2",
+        userId: "u2",
+        artistId: "a2",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const results = findFollowsWithArtists(db, "u1");
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({ artistName: "Radiohead" });
     });
   });
 });

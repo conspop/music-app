@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, asc } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
-import { follows } from "~/db/schema";
+import { artists, follows } from "~/db/schema";
 
 export function followArtist(
   db: DrizzleDb,
@@ -30,5 +30,20 @@ export function findFollowsByArtist(db: DrizzleDb, artistId: string) {
     .select()
     .from(follows)
     .where(eq(follows.artistId, artistId))
+    .all();
+}
+
+export function findFollowsWithArtists(db: DrizzleDb, userId: string) {
+  return db
+    .select({
+      followId: follows.id,
+      artistId: artists.id,
+      artistName: artists.name,
+      createdAt: follows.createdAt,
+    })
+    .from(follows)
+    .innerJoin(artists, eq(follows.artistId, artists.id))
+    .where(eq(follows.userId, userId))
+    .orderBy(asc(artists.name))
     .all();
 }

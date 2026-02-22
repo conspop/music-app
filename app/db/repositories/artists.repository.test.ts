@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { DrizzleDb } from "~/db/connection";
 import { createTestDb } from "../../../tests/db-helpers";
-import { insertArtist, findArtistById, findArtistByName } from "./artists.repository";
+import {
+  insertArtist,
+  findArtistById,
+  findArtistByName,
+  findOrCreateArtist,
+} from "./artists.repository";
 
 describe("artists repository", () => {
   let db: DrizzleDb;
@@ -63,6 +68,39 @@ describe("artists repository", () => {
     it("returns empty array when no match", () => {
       const results = findArtistByName(db, "nonexistent");
       expect(results).toEqual([]);
+    });
+  });
+
+  describe("findOrCreateArtist", () => {
+    it("returns existing artist when name matches exactly", () => {
+      insertArtist(db, {
+        id: "a1",
+        name: "Radiohead",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const artist = findOrCreateArtist(db, "Radiohead");
+      expect(artist).toMatchObject({ id: "a1", name: "Radiohead" });
+    });
+
+    it("creates a new artist when name does not exist", () => {
+      const artist = findOrCreateArtist(db, "Bjork");
+      expect(artist.name).toBe("Bjork");
+      expect(artist.id).toBeTruthy();
+
+      const found = findArtistById(db, artist.id);
+      expect(found).toMatchObject({ name: "Bjork" });
+    });
+
+    it("is case-sensitive for exact matching", () => {
+      insertArtist(db, {
+        id: "a1",
+        name: "Radiohead",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const artist = findOrCreateArtist(db, "radiohead");
+      expect(artist.id).not.toBe("a1");
     });
   });
 });
