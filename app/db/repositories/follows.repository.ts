@@ -4,7 +4,11 @@ import { artists, follows } from "~/db/schema";
 
 export function findFollowedArtists(db: DrizzleDb) {
   return db
-    .selectDistinct({ id: artists.id, name: artists.name })
+    .selectDistinct({
+      id: artists.id,
+      name: artists.name,
+      spotifyId: artists.spotifyId,
+    })
     .from(artists)
     .innerJoin(follows, eq(artists.id, follows.artistId))
     .orderBy(asc(artists.name))

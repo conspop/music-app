@@ -8,6 +8,13 @@
       "when": 1771789035573,
       "tag": "0000_tan_pepper_potts",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1771803552143,
+      "tag": "0001_special_loki",
+      "breakpoints": true
     }
   ]
 }

@@ -29,11 +29,16 @@ export const users = sqliteTable(
   ],
 );
 
-export const artists = sqliteTable("artists", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
+export const artists = sqliteTable(
+  "artists",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    spotifyId: text("spotify_id"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [uniqueIndex("artists_spotify_id_idx").on(table.spotifyId)],
+);
 
 export const follows = sqliteTable(
   "follows",

@@ -4,6 +4,7 @@ import { createTestDb } from "../../../tests/db-helpers";
 import {
   insertArtist,
   findArtistById,
+  findArtistBySpotifyId,
   findArtistByName,
   findOrCreateArtist,
 } from "./artists.repository";
@@ -28,6 +29,21 @@ describe("artists repository", () => {
         name: "Radiohead",
       });
     });
+
+    it("inserts an artist with a spotifyId", () => {
+      const artist = insertArtist(db, {
+        id: "a1",
+        name: "Radiohead",
+        spotifyId: "sp-radio",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      expect(artist).toMatchObject({
+        id: "a1",
+        name: "Radiohead",
+        spotifyId: "sp-radio",
+      });
+    });
   });
 
   describe("findArtistById", () => {
@@ -44,6 +60,25 @@ describe("artists repository", () => {
 
     it("returns undefined when not found", () => {
       const found = findArtistById(db, "nonexistent");
+      expect(found).toBeUndefined();
+    });
+  });
+
+  describe("findArtistBySpotifyId", () => {
+    it("returns the artist when found", () => {
+      insertArtist(db, {
+        id: "a1",
+        name: "Radiohead",
+        spotifyId: "sp-radio",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const found = findArtistBySpotifyId(db, "sp-radio");
+      expect(found).toMatchObject({ id: "a1", spotifyId: "sp-radio" });
+    });
+
+    it("returns undefined when not found", () => {
+      const found = findArtistBySpotifyId(db, "nonexistent");
       expect(found).toBeUndefined();
     });
   });
@@ -72,38 +107,71 @@ describe("artists repository", () => {
   });
 
   describe("findOrCreateArtist", () => {
-    it("returns existing artist with isNew false when name matches exactly", () => {
+    it("deduplicates by spotifyId when provided", () => {
+      insertArtist(db, {
+        id: "a1",
+        name: "Radiohead",
+        spotifyId: "sp-radio",
+        createdAt: new Date("2025-01-01"),
+      });
+
+      const { artist, isNew } = findOrCreateArtist(db, {
+        name: "Radiohead",
+        spotifyId: "sp-radio",
+      });
+      expect(artist).toMatchObject({ id: "a1", spotifyId: "sp-radio" });
+      expect(isNew).toBe(false);
+    });
+
+    it("falls back to name match when no spotifyId provided", () => {
       insertArtist(db, {
         id: "a1",
         name: "Radiohead",
         createdAt: new Date("2025-01-01"),
       });
 
-      const { artist, isNew } = findOrCreateArtist(db, "Radiohead");
+      const { artist, isNew } = findOrCreateArtist(db, {
+        name: "Radiohead",
+      });
       expect(artist).toMatchObject({ id: "a1", name: "Radiohead" });
       expect(isNew).toBe(false);
     });
 
-    it("creates a new artist with isNew true when name does not exist", () => {
-      const { artist, isNew } = findOrCreateArtist(db, "Bjork");
+    it("creates a new artist with spotifyId when not found", () => {
+      const { artist, isNew } = findOrCreateArtist(db, {
+        name: "Bjork",
+        spotifyId: "sp-bjork",
+      });
       expect(artist.name).toBe("Bjork");
+      expect(artist.spotifyId).toBe("sp-bjork");
       expect(artist.id).toBeTruthy();
+      expect(isNew).toBe(true);
+    });
+
+    it("creates a new artist without spotifyId when name does not exist", () => {
+      const { artist, isNew } = findOrCreateArtist(db, { name: "Bjork" });
+      expect(artist.name).toBe("Bjork");
+      expect(artist.spotifyId).toBeNull();
       expect(isNew).toBe(true);
 
       const found = findArtistById(db, artist.id);
       expect(found).toMatchObject({ name: "Bjork" });
     });
 
-    it("is case-sensitive for exact matching", () => {
+    it("matches by spotifyId even when names differ", () => {
       insertArtist(db, {
         id: "a1",
         name: "Radiohead",
+        spotifyId: "sp-radio",
         createdAt: new Date("2025-01-01"),
       });
 
-      const { artist, isNew } = findOrCreateArtist(db, "radiohead");
-      expect(artist.id).not.toBe("a1");
-      expect(isNew).toBe(true);
+      const { artist, isNew } = findOrCreateArtist(db, {
+        name: "radiohead",
+        spotifyId: "sp-radio",
+      });
+      expect(artist.id).toBe("a1");
+      expect(isNew).toBe(false);
     });
   });
 });

@@ -244,7 +244,7 @@ describe("ingestArtist", () => {
     };
 
     const releaseProvider: ReleaseProvider = {
-      async fetchReleases() { return [spotifyRelease]; },
+      async fetchReleases(_artist) { return [spotifyRelease]; },
     };
     const extractor = fakeExtractor({
       RELEASE: [aiRelease, duplicateRelease],
@@ -265,7 +265,7 @@ describe("ingestArtist", () => {
 
   it("falls back to OpenAI when release provider throws", async () => {
     const releaseProvider: ReleaseProvider = {
-      async fetchReleases() { throw new Error("Spotify down"); },
+      async fetchReleases(_artist) { throw new Error("Spotify down"); },
     };
     const extractor = fakeExtractor({
       RELEASE: [

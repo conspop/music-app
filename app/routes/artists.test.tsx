@@ -9,6 +9,12 @@ vi.mock("react-router", async () => {
     useLoaderData: vi.fn(),
     useActionData: vi.fn(),
     useNavigation: () => ({ state: "idle" }),
+    useSubmit: () => vi.fn(),
+    useFetcher: () => ({
+      load: vi.fn(),
+      data: undefined,
+      state: "idle",
+    }),
     Form: ({
       children,
       ...props
@@ -70,21 +76,12 @@ describe("Artists", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the add artist input", () => {
+  it("renders the artist search input", () => {
     mockUseLoaderData.mockReturnValue({ follows: [] });
 
     render(<Artists />);
     expect(
-      screen.getByPlaceholderText(/artist name/i),
-    ).toBeInTheDocument();
-  });
-
-  it("renders the follow button", () => {
-    mockUseLoaderData.mockReturnValue({ follows: [] });
-
-    render(<Artists />);
-    expect(
-      screen.getByRole("button", { name: /follow/i }),
+      screen.getByPlaceholderText(/search for an artist/i),
     ).toBeInTheDocument();
   });
 

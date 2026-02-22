@@ -25,6 +25,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   if (intent === "follow") {
     const artistName = formData.get("artistName");
+    const spotifyId = formData.get("spotifyId");
     if (typeof artistName !== "string" || !artistName.trim()) {
       return Response.json(
         { error: "artistName is required" },
@@ -32,7 +33,10 @@ export async function action({ request }: Route.ActionArgs) {
       );
     }
 
-    const { artist, isNew } = findOrCreateArtist(ctx.db, artistName.trim());
+    const { artist, isNew } = findOrCreateArtist(ctx.db, {
+      name: artistName.trim(),
+      spotifyId: typeof spotifyId === "string" ? spotifyId : undefined,
+    });
     const follow = followArtist(ctx.db, {
       id: crypto.randomUUID(),
       userId: user.id,
@@ -44,6 +48,7 @@ export async function action({ request }: Route.ActionArgs) {
       ingestArtist({
         db: ctx.db,
         contentExtractor: ctx.contentExtractor,
+        releaseProvider: ctx.releaseProvider,
         config: INGESTION_CONFIG,
         artist,
       }).catch((err) => console.error(`[follow] ingestion failed for "${artist.name}":`, err));

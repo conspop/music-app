@@ -24,7 +24,7 @@ export interface IngestArtistDeps {
   contentExtractor: ContentExtractor;
   releaseProvider?: ReleaseProvider;
   config: IngestionConfig;
-  artist: { id: string; name: string };
+  artist: { id: string; name: string; spotifyId?: string | null };
 }
 
 export interface IngestArtistResult {
@@ -115,7 +115,7 @@ async function fetchItemsForType(
   if (type === "RELEASE" && releaseProvider) {
     let providerItems: ExtractedItem[] = [];
     try {
-      providerItems = await releaseProvider.fetchReleases(artist.name);
+      providerItems = await releaseProvider.fetchReleases(artist);
       console.log(`${tag} ${providerItems.length} items from Spotify`);
     } catch (err) {
       console.error(`${tag} Spotify provider threw:`, err);

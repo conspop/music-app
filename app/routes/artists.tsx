@@ -1,4 +1,5 @@
-import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
+import { useRef } from "react";
+import { Form, useActionData, useLoaderData, useNavigation, useSubmit } from "react-router";
 import type { Route } from "./+types/artists";
 import { getAppContext } from "~/server/context";
 import { requireUser } from "~/auth/require-user";
@@ -11,9 +12,9 @@ import { findOrCreateArtist } from "~/db/repositories/artists.repository";
 import { ingestArtist } from "~/ingestion/ingest-artist";
 import { INGESTION_CONFIG } from "~/ingestion/config";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Card, CardContent } from "~/components/ui/card";
 import { Music, X } from "lucide-react";
+import { ArtistSearch } from "~/components/artist-search";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Artists — Music App" }];
@@ -34,11 +35,15 @@ export async function action({ request }: Route.ActionArgs) {
 
   if (intent === "follow") {
     const artistName = formData.get("artistName");
+    const spotifyId = formData.get("spotifyId");
     if (typeof artistName !== "string" || !artistName.trim()) {
       return { error: "Artist name is required" };
     }
 
-    const { artist, isNew } = findOrCreateArtist(ctx.db, artistName.trim());
+    const { artist, isNew } = findOrCreateArtist(ctx.db, {
+      name: artistName.trim(),
+      spotifyId: typeof spotifyId === "string" ? spotifyId : undefined,
+    });
     followArtist(ctx.db, {
       id: crypto.randomUUID(),
       userId: user.id,
@@ -50,6 +55,7 @@ export async function action({ request }: Route.ActionArgs) {
       ingestArtist({
         db: ctx.db,
         contentExtractor: ctx.contentExtractor,
+        releaseProvider: ctx.releaseProvider,
         config: INGESTION_CONFIG,
         artist,
       }).catch((err) => console.error(`[follow] ingestion failed for "${artist.name}":`, err));
@@ -75,6 +81,8 @@ export default function Artists() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state !== "idle";
+  const submit = useSubmit();
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <div className="space-y-8">
@@ -85,17 +93,25 @@ export default function Artists() {
         </p>
       </div>
 
-      <Form method="post" className="flex gap-2">
+      <Form ref={formRef} method="post" className="max-w-sm">
         <input type="hidden" name="intent" value="follow" />
-        <Input
-          name="artistName"
-          placeholder="Artist name"
-          required
-          className="max-w-xs"
+        <input type="hidden" name="artistName" />
+        <input type="hidden" name="spotifyId" />
+        <ArtistSearch
+          onSelect={(artist) => {
+            const form = formRef.current;
+            if (!form) return;
+            const nameInput = form.querySelector<HTMLInputElement>(
+              'input[name="artistName"]',
+            );
+            const spotifyInput = form.querySelector<HTMLInputElement>(
+              'input[name="spotifyId"]',
+            );
+            if (nameInput) nameInput.value = artist.name;
+            if (spotifyInput) spotifyInput.value = artist.spotifyId;
+            submit(form);
+          }}
         />
-        <Button type="submit" disabled={isSubmitting}>
-          Follow
-        </Button>
       </Form>
 
       {actionData && "error" in actionData && (

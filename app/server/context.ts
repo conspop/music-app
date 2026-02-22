@@ -8,9 +8,15 @@ import type { AuthDeps } from "~/auth/auth-handlers";
 import type { ContentExtractor } from "~/ingestion/content-extractor";
 import type { ReleaseProvider } from "~/ingestion/release-provider";
 
+export interface SpotifyCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
 export interface AppContext extends AuthDeps {
   contentExtractor: ContentExtractor;
   releaseProvider?: ReleaseProvider;
+  spotifyCredentials?: SpotifyCredentials;
 }
 
 let cached: AppContext | null = null;
@@ -30,11 +36,15 @@ export function getAppContext(): AppContext {
   );
   const contentExtractor = createOpenAIContentExtractor(env.OPENAI_API_KEY);
 
-  const releaseProvider =
+  const spotifyCredentials =
     env.SPOTIFY_CLIENT_ID && env.SPOTIFY_CLIENT_SECRET
-      ? createSpotifyReleaseProvider(env.SPOTIFY_CLIENT_ID, env.SPOTIFY_CLIENT_SECRET)
+      ? { clientId: env.SPOTIFY_CLIENT_ID, clientSecret: env.SPOTIFY_CLIENT_SECRET }
       : undefined;
 
-  cached = { db, sessions, authProvider, contentExtractor, releaseProvider };
+  const releaseProvider = spotifyCredentials
+    ? createSpotifyReleaseProvider(spotifyCredentials.clientId, spotifyCredentials.clientSecret)
+    : undefined;
+
+  cached = { db, sessions, authProvider, contentExtractor, releaseProvider, spotifyCredentials };
   return cached;
 }

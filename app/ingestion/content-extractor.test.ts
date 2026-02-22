@@ -317,6 +317,26 @@ describe("createOpenAIContentExtractor", () => {
       expect(results[0].title).toBe("Nested Item");
     });
 
+    it("salvages complete items from truncated JSON arrays", async () => {
+      const truncatedJson =
+        '[{"type":"EVENT","title":"Show A","url":"https://example.com/a","eventDate":"2025-09-01","eventVenue":"Venue A","eventCity":"City A","confidence":0.9},{"type":"EVENT","title":"Show B","url":"https://example.com/b","eventDate":"2025-09-02","eventVenue":"Venue B","eventCity":"City B","confidence":0.9},{"type":"EVENT","title":"Truncated","url":"https://example.com/c","eventDa';
+      server.use(
+        http.post(RESPONSES_URL, () => {
+          return HttpResponse.json({ output_text: truncatedJson });
+        }),
+      );
+
+      const results = await extractor.extract({
+        artistName: "Alabama Shakes",
+        type: "EVENT",
+        since: new Date("2025-06-01"),
+      });
+
+      expect(results).toHaveLength(2);
+      expect(results[0].title).toBe("Show A");
+      expect(results[1].title).toBe("Show B");
+    });
+
     it("returns empty array when API returns an error status", async () => {
       server.use(
         http.post(RESPONSES_URL, () => {

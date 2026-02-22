@@ -1,102 +1,16 @@
+import {
+  getAccessToken,
+  searchArtists,
+  getArtistAlbums,
+  type SpotifyAlbum,
+} from "~/lib/spotify-client";
 import type { ExtractedItem } from "./types";
 
 export interface ReleaseProvider {
-  fetchReleases(artistName: string): Promise<ExtractedItem[]>;
-}
-
-const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
-const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
-
-interface SpotifyTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
-interface SpotifyImage {
-  url: string;
-  width: number;
-  height: number;
-}
-
-interface SpotifyArtist {
-  id: string;
-  name: string;
-}
-
-interface SpotifyAlbum {
-  id: string;
-  name: string;
-  album_type: string;
-  release_date: string;
-  release_date_precision: string;
-  external_urls: { spotify: string };
-  images: SpotifyImage[];
-  total_tracks: number;
-  artists: SpotifyArtist[];
-}
-
-async function getAccessToken(
-  clientId: string,
-  clientSecret: string,
-): Promise<string> {
-  const response = await fetch(SPOTIFY_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-    },
-    body: "grant_type=client_credentials",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Spotify token request failed: ${response.status}`);
-  }
-
-  const data = (await response.json()) as SpotifyTokenResponse;
-  return data.access_token;
-}
-
-async function searchArtist(
-  token: string,
-  artistName: string,
-): Promise<string | null> {
-  const params = new URLSearchParams({
-    q: artistName,
-    type: "artist",
-    limit: "1",
-  });
-
-  const response = await fetch(`${SPOTIFY_API_BASE}/search?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!response.ok) return null;
-
-  const data = (await response.json()) as {
-    artists: { items: SpotifyArtist[] };
-  };
-  return data.artists.items[0]?.id ?? null;
-}
-
-async function getArtistAlbums(
-  token: string,
-  artistId: string,
-): Promise<SpotifyAlbum[]> {
-  const params = new URLSearchParams({
-    include_groups: "album,single",
-    limit: "50",
-  });
-
-  const response = await fetch(
-    `${SPOTIFY_API_BASE}/artists/${artistId}/albums?${params}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
-
-  if (!response.ok) return [];
-
-  const data = (await response.json()) as { items: SpotifyAlbum[] };
-  return data.items;
+  fetchReleases(artist: {
+    name: string;
+    spotifyId?: string | null;
+  }): Promise<ExtractedItem[]>;
 }
 
 function albumToExtractedItem(album: SpotifyAlbum): ExtractedItem {
@@ -116,8 +30,8 @@ export function createSpotifyReleaseProvider(
   clientSecret: string,
 ): ReleaseProvider {
   return {
-    async fetchReleases(artistName) {
-      const tag = `[spotify:${artistName}]`;
+    async fetchReleases(artist) {
+      const tag = `[spotify:${artist.name}]`;
 
       let token: string;
       try {
@@ -127,13 +41,18 @@ export function createSpotifyReleaseProvider(
         return [];
       }
 
-      const artistId = await searchArtist(token, artistName);
-      if (!artistId) {
-        console.warn(`${tag} artist not found on Spotify`);
-        return [];
+      let spotifyArtistId = artist.spotifyId;
+
+      if (!spotifyArtistId) {
+        const results = await searchArtists(token, artist.name, 1);
+        spotifyArtistId = results[0]?.id ?? null;
+        if (!spotifyArtistId) {
+          console.warn(`${tag} artist not found on Spotify`);
+          return [];
+        }
       }
 
-      const albums = await getArtistAlbums(token, artistId);
+      const albums = await getArtistAlbums(token, spotifyArtistId);
       console.log(`${tag} found ${albums.length} releases on Spotify`);
 
       const oneYearAgo = new Date();

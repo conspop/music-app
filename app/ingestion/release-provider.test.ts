@@ -69,7 +69,7 @@ describe("createSpotifyReleaseProvider", () => {
     mockArtistSearch("art1", "Test Artist");
     mockAlbums("art1", [recentAlbum, oldAlbum]);
 
-    const results = await provider.fetchReleases("Test Artist");
+    const results = await provider.fetchReleases({ name: "Test Artist" });
 
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
@@ -78,6 +78,19 @@ describe("createSpotifyReleaseProvider", () => {
       url: "https://open.spotify.com/album/alb1",
       confidence: 1.0,
     });
+  });
+
+  it("skips Spotify search when spotifyId is provided", async () => {
+    mockSpotifyAuth();
+    mockAlbums("art1", [recentAlbum]);
+
+    const results = await provider.fetchReleases({
+      name: "Test Artist",
+      spotifyId: "art1",
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("New Album");
   });
 
   it("sends client credentials as Basic auth for token", async () => {
@@ -93,7 +106,7 @@ describe("createSpotifyReleaseProvider", () => {
     mockArtistSearch("art1", "Test Artist");
     mockAlbums("art1", []);
 
-    await provider.fetchReleases("Test Artist");
+    await provider.fetchReleases({ name: "Test Artist" });
 
     expect(capturedAuth).toBe(`Basic ${btoa("client-id:client-secret")}`);
   });
@@ -106,7 +119,7 @@ describe("createSpotifyReleaseProvider", () => {
       ),
     );
 
-    const results = await provider.fetchReleases("Unknown Artist");
+    const results = await provider.fetchReleases({ name: "Unknown Artist" });
 
     expect(results).toEqual([]);
   });
@@ -116,7 +129,7 @@ describe("createSpotifyReleaseProvider", () => {
       http.post(SPOTIFY_TOKEN_URL, () => new HttpResponse(null, { status: 401 })),
     );
 
-    const results = await provider.fetchReleases("Test Artist");
+    const results = await provider.fetchReleases({ name: "Test Artist" });
 
     expect(results).toEqual([]);
   });
@@ -126,7 +139,7 @@ describe("createSpotifyReleaseProvider", () => {
     mockArtistSearch("art1", "Test Artist");
     mockAlbums("art1", [oldAlbum]);
 
-    const results = await provider.fetchReleases("Test Artist");
+    const results = await provider.fetchReleases({ name: "Test Artist" });
 
     expect(results).toEqual([]);
   });
@@ -136,7 +149,7 @@ describe("createSpotifyReleaseProvider", () => {
     mockArtistSearch("art1", "Test Artist");
     mockAlbums("art1", [recentAlbum]);
 
-    const results = await provider.fetchReleases("Test Artist");
+    const results = await provider.fetchReleases({ name: "Test Artist" });
 
     expect(results[0].imageUrl).toBe("https://i.scdn.co/image/abc");
   });

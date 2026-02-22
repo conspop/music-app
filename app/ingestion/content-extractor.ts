@@ -70,6 +70,30 @@ function extractJson(text: string): string {
   return text.trim();
 }
 
+function repairTruncatedJsonArray(text: string): unknown[] | null {
+  if (!text.startsWith("[")) return null;
+
+  let lastCloseBrace = -1;
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}") {
+      depth--;
+      if (depth === 0) lastCloseBrace = i;
+    }
+  }
+
+  if (lastCloseBrace === -1) return null;
+
+  const repaired = text.slice(0, lastCloseBrace + 1) + "]";
+  try {
+    const parsed = JSON.parse(repaired);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createOpenAIContentExtractor(apiKey: string): ContentExtractor {
   return {
     async extract({ artistName, type, since }) {
@@ -110,7 +134,20 @@ export function createOpenAIContentExtractor(apiKey: string): ContentExtractor {
         const body = responsesSchema.parse(json);
         const content = extractJson(getOutputText(body));
         console.log(`${tag} raw response: ${content.slice(0, 500)}`);
-        const parsed = JSON.parse(content);
+
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(content);
+        } catch {
+          const repaired = repairTruncatedJsonArray(content);
+          if (repaired && repaired.length > 0) {
+            console.warn(`${tag} JSON was truncated, salvaged ${repaired.length} complete item(s)`);
+            parsed = repaired;
+          } else {
+            throw new Error("Could not parse or repair JSON response");
+          }
+        }
+
         if (!Array.isArray(parsed)) {
           console.warn(`${tag} response was not an array, got ${typeof parsed}`);
           return [];
