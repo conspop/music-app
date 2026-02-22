@@ -212,4 +212,45 @@ describe("upcoming repository", () => {
     const events = findUpcomingEvents(db, "u1");
     expect(events).toEqual([]);
   });
+
+  it("filters by artistIds when specified", () => {
+    insertContentItem(
+      db,
+      makeEvent({ artistId: "a1", eventDate: new Date("2025-08-15") }),
+    );
+    insertContentItem(
+      db,
+      makeEvent({ artistId: "a2", eventDate: new Date("2025-08-16") }),
+    );
+
+    const events = findUpcomingEvents(db, "u1", { artistIds: ["a1"] });
+    expect(events).toHaveLength(1);
+    expect(events[0].artistId).toBe("a1");
+  });
+
+  it("returns events for multiple artistIds", () => {
+    insertContentItem(
+      db,
+      makeEvent({ artistId: "a1", eventDate: new Date("2025-08-15") }),
+    );
+    insertContentItem(
+      db,
+      makeEvent({ artistId: "a2", eventDate: new Date("2025-08-16") }),
+    );
+
+    const events = findUpcomingEvents(db, "u1", {
+      artistIds: ["a1", "a2"],
+    });
+    expect(events).toHaveLength(2);
+  });
+
+  it("includes artistName in results", () => {
+    insertContentItem(
+      db,
+      makeEvent({ artistId: "a1", eventDate: new Date("2025-08-15") }),
+    );
+
+    const events = findUpcomingEvents(db, "u1");
+    expect(events[0].artistName).toBe("Radiohead");
+  });
 });

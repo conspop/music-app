@@ -176,4 +176,28 @@ describe("feed repository", () => {
     const items = findFeedItems(db, "u1");
     expect(items).toEqual([]);
   });
+
+  it("filters by artistIds when specified", () => {
+    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a2", type: "NEWS" }));
+
+    const items = findFeedItems(db, "u1", { artistIds: ["a1"] });
+    expect(items).toHaveLength(1);
+    expect(items[0].artistId).toBe("a1");
+  });
+
+  it("returns items for multiple artistIds", () => {
+    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
+    insertContentItem(db, makeItem({ artistId: "a2", type: "NEWS" }));
+
+    const items = findFeedItems(db, "u1", { artistIds: ["a1", "a2"] });
+    expect(items).toHaveLength(2);
+  });
+
+  it("includes artistName in results", () => {
+    insertContentItem(db, makeItem({ artistId: "a1", type: "NEWS" }));
+
+    const items = findFeedItems(db, "u1");
+    expect(items[0].artistName).toBe("Radiohead");
+  });
 });
