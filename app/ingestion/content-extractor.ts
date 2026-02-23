@@ -23,13 +23,7 @@ function buildPrompt(artistName: string, type: ContentType, since: Date): string
   const yearAgoStr = oneYearAgo.toISOString().slice(0, 10);
 
   const typeInstructions: Record<ContentType, string> = {
-    RELEASE: `Find music releases by the artist "${artistName}". Today is ${today}.
-
-Search for:
-1. Upcoming releases — albums, singles, EPs, or music videos announced for release in the future or in the past 2 weeks. These are the highest priority.
-2. Recent releases — anything released since ${yearAgoStr} that is noteworthy (debut albums, major singles, collaborations).
-
-For each item return: title, url, summary, imageUrl (optional), releaseType (one of: "album", "single", "ep", "compilation"), publishedAt (YYYY-MM-DD — use the release date, not the announcement date), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+    RELEASE: "", // Releases are handled by the Spotify provider, not OpenAI
     EVENT: `Find upcoming concerts, shows, and live performances for the artist "${artistName}". Today is ${today}.
 
 Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: check event listings, venue calendars, and multi-artist shows in addition to the artist's own tour page.

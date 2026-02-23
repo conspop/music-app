@@ -113,13 +113,18 @@ async function fetchItemsForType(
   const { contentExtractor, releaseProvider, artist } = deps;
   const tag = `[ingest:${type}:${artist.name}]`;
 
-  if (type === "RELEASE" && releaseProvider) {
+  if (type === "RELEASE") {
+    if (!releaseProvider) {
+      console.warn(`${tag} no release provider configured, skipping`);
+      return [];
+    }
     try {
       const items = await releaseProvider.fetchReleases(artist);
       console.log(`${tag} ${items.length} items from Spotify`);
       return items;
     } catch (err) {
-      console.error(`${tag} Spotify provider threw, falling back to OpenAI:`, err);
+      console.error(`${tag} Spotify provider threw:`, err);
+      return [];
     }
   }
 

@@ -6,6 +6,7 @@ import { insertUser } from "~/db/repositories/users.repository";
 import { followArtist } from "~/db/repositories/follows.repository";
 import { findContentItemsByArtist } from "~/db/repositories/content-items.repository";
 import type { ContentExtractor } from "./content-extractor";
+import type { ReleaseProvider } from "./release-provider";
 import type { ExtractedItem } from "./types";
 import { INGESTION_CONFIG } from "./config";
 import { runIngestion } from "./orchestrator";
@@ -16,6 +17,16 @@ function fakeExtractor(
   return {
     async extract({ artistName, type }) {
       return itemsByArtist[artistName]?.[type] ?? [];
+    },
+  };
+}
+
+function fakeReleaseProvider(
+  itemsByArtist: Record<string, ExtractedItem[]>,
+): ReleaseProvider {
+  return {
+    async fetchReleases(artist) {
+      return itemsByArtist[artist.name] ?? [];
     },
   };
 }
@@ -63,34 +74,32 @@ describe("runIngestion", () => {
       createdAt: new Date("2025-01-01"),
     });
 
-    const extractor = fakeExtractor({
-      Radiohead: {
-        RELEASE: [
-          {
-            type: "RELEASE",
-            title: "Radiohead Album",
-            url: "https://example.com/rh",
-            publishedAt: "2025-06-01",
-            confidence: 0.9,
-          },
-        ],
-      },
-      Bjork: {
-        RELEASE: [
-          {
-            type: "RELEASE",
-            title: "Bjork Release",
-            url: "https://example.com/bj",
-            publishedAt: "2025-06-01",
-            confidence: 0.85,
-          },
-        ],
-      },
+    const extractor = fakeExtractor({});
+    const releaseProvider = fakeReleaseProvider({
+      Radiohead: [
+        {
+          type: "RELEASE",
+          title: "Radiohead Album",
+          url: "https://example.com/rh",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
+      Bjork: [
+        {
+          type: "RELEASE",
+          title: "Bjork Release",
+          url: "https://example.com/bj",
+          publishedAt: "2025-06-01",
+          confidence: 0.85,
+        },
+      ],
     });
 
     const summary = await runIngestion({
       db,
       contentExtractor: extractor,
+      releaseProvider,
       config: INGESTION_CONFIG,
     });
 
@@ -112,34 +121,32 @@ describe("runIngestion", () => {
       createdAt: new Date("2025-01-01"),
     });
 
-    const extractor = fakeExtractor({
-      Radiohead: {
-        RELEASE: [
-          {
-            type: "RELEASE",
-            title: "Album",
-            url: "https://example.com/release",
-            publishedAt: "2025-06-01",
-            confidence: 0.9,
-          },
-        ],
-      },
-      Portishead: {
-        RELEASE: [
-          {
-            type: "RELEASE",
-            title: "Should Not Appear",
-            url: "https://example.com/nope",
-            publishedAt: "2025-06-01",
-            confidence: 0.9,
-          },
-        ],
-      },
+    const extractor = fakeExtractor({});
+    const releaseProvider = fakeReleaseProvider({
+      Radiohead: [
+        {
+          type: "RELEASE",
+          title: "Album",
+          url: "https://example.com/release",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
+      Portishead: [
+        {
+          type: "RELEASE",
+          title: "Should Not Appear",
+          url: "https://example.com/nope",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
     });
 
     const summary = await runIngestion({
       db,
       contentExtractor: extractor,
+      releaseProvider,
       config: INGESTION_CONFIG,
     });
 
@@ -168,45 +175,41 @@ describe("runIngestion", () => {
       createdAt: new Date("2025-01-01"),
     });
 
-    const extractor = fakeExtractor({
-      Radiohead: {
-        RELEASE: [
-          {
-            type: "RELEASE",
-            title: "RH",
-            url: "https://example.com/1",
-            publishedAt: "2025-06-01",
-            confidence: 0.9,
-          },
-        ],
-      },
-      Bjork: {
-        RELEASE: [
-          {
-            type: "RELEASE",
-            title: "BJ",
-            url: "https://example.com/2",
-            publishedAt: "2025-06-01",
-            confidence: 0.9,
-          },
-        ],
-      },
-      Portishead: {
-        RELEASE: [
-          {
-            type: "RELEASE",
-            title: "PH",
-            url: "https://example.com/3",
-            publishedAt: "2025-06-01",
-            confidence: 0.9,
-          },
-        ],
-      },
+    const extractor = fakeExtractor({});
+    const releaseProvider = fakeReleaseProvider({
+      Radiohead: [
+        {
+          type: "RELEASE",
+          title: "RH",
+          url: "https://example.com/1",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
+      Bjork: [
+        {
+          type: "RELEASE",
+          title: "BJ",
+          url: "https://example.com/2",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
+      Portishead: [
+        {
+          type: "RELEASE",
+          title: "PH",
+          url: "https://example.com/3",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
     });
 
     const summary = await runIngestion({
       db,
       contentExtractor: extractor,
+      releaseProvider,
       config: { ...INGESTION_CONFIG, MAX_ARTISTS_PER_RUN: 2 },
     });
 
