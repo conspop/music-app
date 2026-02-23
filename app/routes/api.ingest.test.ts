@@ -95,4 +95,44 @@ describe("api.ingest action", () => {
     await expect(action({ request } as never)).rejects.toThrow("redirect");
     expect(mockedRunIngestion).not.toHaveBeenCalled();
   });
+
+  it("allows user with seb.beitel@gmail.com to run ingestion", async () => {
+    mockedGetEnv.mockReturnValue({ CRON_SECRET: undefined } as never);
+    mockedRequireUser.mockResolvedValue({
+      id: "u1",
+      email: "seb.beitel@gmail.com",
+      name: "Seb",
+    } as never);
+
+    const request = new Request("https://example.com/api/ingest", {
+      method: "POST",
+    });
+
+    const response = await action({ request } as never);
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.summary).toBeDefined();
+    expect(mockedRunIngestion).toHaveBeenCalled();
+  });
+
+  it("rejects user with different email with 403", async () => {
+    mockedGetEnv.mockReturnValue({ CRON_SECRET: undefined } as never);
+    mockedRequireUser.mockResolvedValue({
+      id: "u2",
+      email: "other@example.com",
+      name: "Other",
+    } as never);
+
+    const request = new Request("https://example.com/api/ingest", {
+      method: "POST",
+    });
+
+    const response = await action({ request } as never);
+    const json = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(json.error).toContain("Forbidden");
+    expect(mockedRunIngestion).not.toHaveBeenCalled();
+  });
 });

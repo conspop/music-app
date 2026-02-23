@@ -10,6 +10,7 @@ import { LocationSearch } from "~/components/location-search";
 import { MapPin } from "lucide-react";
 import type { GeocoderResult } from "~/lib/geocoder";
 import type { IngestionSummary } from "~/ingestion/orchestrator";
+import { ALLOWED_INGEST_EMAIL } from "./api.ingest";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Settings — Music App" }];
@@ -277,9 +278,12 @@ export default function Settings() {
         </Button>
       </Form>
 
-      <hr className="border-border" />
-
-      <IngestionTrigger />
+      {user.email === ALLOWED_INGEST_EMAIL && (
+        <>
+          <hr className="border-border" />
+          <IngestionTrigger />
+        </>
+      )}
     </div>
   );
 }

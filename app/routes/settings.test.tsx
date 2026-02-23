@@ -146,8 +146,22 @@ describe("Settings", () => {
   });
 
   describe("ingestion trigger", () => {
-    it("renders a Run Ingestion button", () => {
+    const allowedUser = {
+      ...mockUser,
+      email: "seb.beitel@gmail.com",
+    };
+
+    it("hides ingestion section for non-allowed users", () => {
       mockUseLoaderData.mockReturnValue({ user: mockUser });
+
+      render(<Settings />);
+      expect(
+        screen.queryByRole("button", { name: /run ingestion/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders a Run Ingestion button for allowed user", () => {
+      mockUseLoaderData.mockReturnValue({ user: allowedUser });
 
       render(<Settings />);
       expect(
@@ -156,7 +170,7 @@ describe("Settings", () => {
     });
 
     it("shows summary after successful ingestion", async () => {
-      mockUseLoaderData.mockReturnValue({ user: mockUser });
+      mockUseLoaderData.mockReturnValue({ user: allowedUser });
       const user = userEvent.setup();
 
       global.fetch = vi.fn().mockResolvedValueOnce({
@@ -180,7 +194,7 @@ describe("Settings", () => {
     });
 
     it("shows error message when ingestion fails", async () => {
-      mockUseLoaderData.mockReturnValue({ user: mockUser });
+      mockUseLoaderData.mockReturnValue({ user: allowedUser });
       const user = userEvent.setup();
 
       global.fetch = vi.fn().mockResolvedValueOnce({
@@ -195,7 +209,7 @@ describe("Settings", () => {
     });
 
     it("disables the button while ingestion is running", async () => {
-      mockUseLoaderData.mockReturnValue({ user: mockUser });
+      mockUseLoaderData.mockReturnValue({ user: allowedUser });
       const user = userEvent.setup();
 
       let resolvePromise: (value: unknown) => void;
