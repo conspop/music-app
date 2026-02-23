@@ -1,0 +1,17 @@
+name: Nightly Ingestion
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger ingestion
+        run: |
+          curl -X POST "https://music-app-production.fly.dev/api/ingest" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -f -s -o /dev/null -w "%{http_code}"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

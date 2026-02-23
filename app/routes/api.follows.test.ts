@@ -47,6 +47,7 @@ describe("api/follows", () => {
       sessions,
       authProvider: {} as any,
       contentExtractor: fakeContentExtractor as any,
+      geocoder: {} as any,
     });
 
     insertUser(db, {

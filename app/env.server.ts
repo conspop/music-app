@@ -19,5 +19,7 @@ export function getEnv() {
     SPOTIFY_CLIENT_ID: optional("SPOTIFY_CLIENT_ID"),
     SPOTIFY_CLIENT_SECRET: optional("SPOTIFY_CLIENT_SECRET"),
     GOOGLE_MAPS_API_KEY: optional("GOOGLE_MAPS_API_KEY"),
+    APP_URL: optional("APP_URL"),
+    CRON_SECRET: optional("CRON_SECRET"),
   };
 }

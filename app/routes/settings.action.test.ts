@@ -31,6 +31,7 @@ describe("settings action", () => {
       sessions,
       authProvider: {} as never,
       contentExtractor: {} as any,
+      geocoder: {} as any,
     });
 
     insertUser(db, {

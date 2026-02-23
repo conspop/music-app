@@ -2,10 +2,13 @@ import type { DrizzleDb } from "~/db/connection";
 import { findAllContentItemIds } from "~/db/repositories/content-items.repository";
 import { markPreExistingItemsAsSeen } from "~/db/repositories/content-item-seen.repository";
 import { findFollowedArtists } from "~/db/repositories/follows.repository";
+import { createLogger } from "~/lib/logger";
 import type { ContentExtractor } from "./content-extractor";
 import type { IngestionConfig } from "./config";
 import type { Geocoder } from "~/lib/geocoder";
 import { ingestArtist } from "./ingest-artist";
+
+const log = createLogger("ingestion");
 
 export interface IngestionDeps {
   db: DrizzleDb;
@@ -29,8 +32,8 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
   const artists = findFollowedArtists(db);
   const capped = artists.slice(0, config.MAX_ARTISTS_PER_RUN);
 
-  console.log(
-    `[ingestion] starting run for ${capped.length} artist(s): ${capped.map((a) => a.name).join(", ")}`,
+  log.info(
+    `starting run for ${capped.length} artist(s): ${capped.map((a) => a.name).join(", ")}`,
   );
 
   const summary: IngestionSummary = {
@@ -42,7 +45,7 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
   };
 
   for (const artist of capped) {
-    console.log(`[ingestion] processing "${artist.name}" (${artist.id})`);
+    log.info(`processing "${artist.name}" (${artist.id})`);
 
     const result = await ingestArtist({
       db,
@@ -59,8 +62,8 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
     summary.totalErrors += result.errors;
   }
 
-  console.log(
-    `[ingestion] complete: ${summary.artistsProcessed} artists, ${summary.totalInserted} inserted, ${summary.totalSkippedDupes} dupes, ${summary.totalErrors} errors`,
+  log.info(
+    `complete: ${summary.artistsProcessed} artists, ${summary.totalInserted} inserted, ${summary.totalSkippedDupes} dupes, ${summary.totalErrors} errors`,
   );
 
   markPreExistingItemsAsSeen(db, preExistingItemIds);

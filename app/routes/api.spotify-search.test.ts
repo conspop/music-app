@@ -75,6 +75,7 @@ describe("api/spotify-search", () => {
       sessions,
       authProvider: {} as any,
       contentExtractor: {} as any,
+      geocoder: {} as any,
       spotifyCredentials: {
         clientId: "test-client-id",
         clientSecret: "test-client-secret",
@@ -152,6 +153,7 @@ describe("api/spotify-search", () => {
       sessions,
       authProvider: {} as any,
       contentExtractor: {} as any,
+      geocoder: {} as any,
     });
 
     const request = await authedRequest(

@@ -59,6 +59,7 @@ describe("api/feed", () => {
       sessions,
       authProvider: {} as any,
       contentExtractor: {} as any,
+      geocoder: {} as any,
     });
 
     insertUser(db, {

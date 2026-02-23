@@ -24,7 +24,7 @@ export function LocationSearch({ onSelect }: LocationSearchProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const fetcher = useFetcher<{ results: GeocoderResult[] }>();
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const results = fetcher.data?.results ?? [];
   const isLoading = fetcher.state === "loading";

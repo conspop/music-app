@@ -30,7 +30,7 @@ export function ArtistSearch({ onSelect }: ArtistSearchProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const fetcher = useFetcher<{ results: SpotifyArtistResult[] }>();
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const results = fetcher.data?.results ?? [];
   const isLoading = fetcher.state === "loading";
