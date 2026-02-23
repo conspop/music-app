@@ -7,7 +7,16 @@ jobs:
   ingest:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger ingestion
+      - name: Trigger ingestion (staging)
+        run: |
+          curl -X POST "https://music-app-staging.fly.dev/api/ingest" \
+            -H "Authorization: Bearer $CRON_SECRET_STAGING" \
+            -H "Content-Type: application/json" \
+            -f -s -o /dev/null -w "%{http_code}"
+        env:
+          CRON_SECRET_STAGING: ${{ secrets.CRON_SECRET_STAGING }}
+
+      - name: Trigger ingestion (production)
         run: |
           curl -X POST "https://music-app-production.fly.dev/api/ingest" \
             -H "Authorization: Bearer $CRON_SECRET" \
