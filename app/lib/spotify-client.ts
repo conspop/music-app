@@ -75,22 +75,34 @@ export async function searchArtists(
   return data.artists.items;
 }
 
+interface SpotifyAlbumsPage {
+  items: SpotifyAlbum[];
+  total: number;
+  next: string | null;
+}
+
+const ALBUMS_PAGE_LIMIT = 10;
+const ALBUMS_MAX_PAGES = 5;
+
 export async function getArtistAlbums(
   token: string,
   artistId: string,
 ): Promise<SpotifyAlbum[]> {
-  const params = new URLSearchParams({
-    include_groups: "album,single",
-    limit: "50",
-  });
+  const headers = { Authorization: `Bearer ${token}` };
+  const all: SpotifyAlbum[] = [];
 
-  const response = await fetch(
-    `${SPOTIFY_API_BASE}/artists/${artistId}/albums?${params}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
+  let url: string | null =
+    `${SPOTIFY_API_BASE}/artists/${artistId}/albums` +
+    `?include_groups=album,single&limit=${ALBUMS_PAGE_LIMIT}`;
 
-  if (!response.ok) return [];
+  for (let page = 0; url && page < ALBUMS_MAX_PAGES; page++) {
+    const response = await fetch(url, { headers });
+    if (!response.ok) break;
 
-  const data = (await response.json()) as { items: SpotifyAlbum[] };
-  return data.items;
+    const data = (await response.json()) as SpotifyAlbumsPage;
+    all.push(...data.items);
+    url = data.next;
+  }
+
+  return all;
 }

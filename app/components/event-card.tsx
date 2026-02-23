@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
-import { MapPin, Calendar } from "lucide-react";
+import { MapPin, Calendar, ExternalLink } from "lucide-react";
 
 export interface EventItem {
   id: string;
@@ -63,6 +63,17 @@ export function EventCard({ event }: { event: EventItem }) {
             <MapPin className="h-3.5 w-3.5" />
             {[event.eventVenue, event.eventCity].filter(Boolean).join(", ")}
           </span>
+        )}
+        {event.url && (
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Tickets / More Info
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
         )}
       </CardContent>
     </Card>

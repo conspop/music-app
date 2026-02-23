@@ -77,6 +77,7 @@ export const contentItems = sqliteTable(
     eventDate: integer("event_date", { mode: "timestamp" }),
     eventVenue: text("event_venue"),
     eventCity: text("event_city"),
+    releaseType: text("release_type"),
     eventLat: real("event_lat"),
     eventLng: real("event_lng"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),

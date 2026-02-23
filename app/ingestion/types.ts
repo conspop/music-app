@@ -14,9 +14,13 @@ const baseFields = {
   confidence: z.number().min(0).max(1),
 };
 
+export const RELEASE_TYPES = ["album", "single", "ep", "compilation"] as const;
+export type ReleaseType = (typeof RELEASE_TYPES)[number];
+
 export const extractedReleaseItemSchema = z.object({
   ...baseFields,
   publishedAt: z.string(),
+  releaseType: nullable(z.enum(RELEASE_TYPES)),
 });
 
 export const extractedEventItemSchema = z.object({

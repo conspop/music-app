@@ -220,7 +220,7 @@ describe("ingestArtist", () => {
     expect(result.inserted).toBe(5);
   });
 
-  it("merges releases from Spotify provider and OpenAI, deduping by URL", async () => {
+  it("uses only Spotify for releases when provider is available", async () => {
     const spotifyRelease: ExtractedItem = {
       type: "RELEASE",
       title: "Spotify Album",
@@ -228,26 +228,20 @@ describe("ingestArtist", () => {
       publishedAt: "2025-06-01",
       confidence: 1.0,
     };
-    const aiRelease: ExtractedItem = {
-      type: "RELEASE",
-      title: "AI Found Album",
-      url: "https://example.com/release/2",
-      publishedAt: "2025-07-01",
-      confidence: 0.85,
-    };
-    const duplicateRelease: ExtractedItem = {
-      type: "RELEASE",
-      title: "Spotify Album (AI duplicate)",
-      url: "https://open.spotify.com/album/1",
-      publishedAt: "2025-06-01",
-      confidence: 0.8,
-    };
 
     const releaseProvider: ReleaseProvider = {
       async fetchReleases(_artist) { return [spotifyRelease]; },
     };
     const extractor = fakeExtractor({
-      RELEASE: [aiRelease, duplicateRelease],
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "AI Album (should not appear)",
+          url: "https://example.com/release/2",
+          publishedAt: "2025-07-01",
+          confidence: 0.85,
+        },
+      ],
       EVENT: [],
     });
 
@@ -259,8 +253,72 @@ describe("ingestArtist", () => {
       artist: { id: "a1", name: "Radiohead" },
     });
 
-    expect(result.inserted).toBe(2);
-    expect(result.skippedDupes).toBe(1);
+    const items = findContentItemsByArtist(db, "a1");
+    expect(result.inserted).toBe(1);
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("Spotify Album");
+  });
+
+  it("stores releaseType from extracted items", async () => {
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "My Single",
+          url: "https://example.com/r/single",
+          publishedAt: "2025-06-01",
+          releaseType: "single",
+          confidence: 0.9,
+        },
+        {
+          type: "RELEASE",
+          title: "My Album",
+          url: "https://example.com/r/album",
+          publishedAt: "2025-06-01",
+          releaseType: "album",
+          confidence: 0.9,
+        },
+      ],
+      EVENT: [],
+    });
+
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Radiohead" },
+    });
+
+    const items = findContentItemsByArtist(db, "a1");
+    const single = items.find((i) => i.title === "My Single");
+    const album = items.find((i) => i.title === "My Album");
+    expect(single?.releaseType).toBe("single");
+    expect(album?.releaseType).toBe("album");
+  });
+
+  it("stores null releaseType when not provided", async () => {
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "Unknown Type",
+          url: "https://example.com/r/unknown",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
+      EVENT: [],
+    });
+
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Radiohead" },
+    });
+
+    const items = findContentItemsByArtist(db, "a1");
+    expect(items[0].releaseType).toBeNull();
   });
 
   it("falls back to OpenAI when release provider throws", async () => {

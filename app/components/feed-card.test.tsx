@@ -11,6 +11,7 @@ const mockItem = {
   url: "https://example.com/news/1",
   summary: "The band confirmed a new release for 2026.",
   imageUrl: null,
+  releaseType: null as string | null,
   confidence: 0.95,
   publishedAt: new Date("2026-02-20"),
   createdAt: new Date("2026-02-20"),
@@ -62,5 +63,40 @@ describe("FeedCard", () => {
     expect(
       screen.getByText("Radiohead announces new album"),
     ).toBeInTheDocument();
+  });
+
+  it("shows specific release type badge when releaseType is set", () => {
+    render(<FeedCard item={{ ...mockItem, releaseType: "album" }} />);
+    expect(screen.getByText("Album")).toBeInTheDocument();
+  });
+
+  it("shows 'Single' badge for single releaseType", () => {
+    render(<FeedCard item={{ ...mockItem, releaseType: "single" }} />);
+    expect(screen.getByText("Single")).toBeInTheDocument();
+  });
+
+  it("shows 'EP' badge for ep releaseType", () => {
+    render(<FeedCard item={{ ...mockItem, releaseType: "ep" }} />);
+    expect(screen.getByText("EP")).toBeInTheDocument();
+  });
+
+  it("falls back to generic type badge when releaseType is null", () => {
+    render(<FeedCard item={{ ...mockItem, releaseType: null }} />);
+    expect(screen.getByText("RELEASE")).toBeInTheDocument();
+  });
+
+  it("displays album art image when imageUrl is provided", () => {
+    render(
+      <FeedCard
+        item={{ ...mockItem, imageUrl: "https://i.scdn.co/image/abc" }}
+      />,
+    );
+    const img = screen.getByRole("img");
+    expect(img).toHaveAttribute("src", "https://i.scdn.co/image/abc");
+  });
+
+  it("does not render an image when imageUrl is null", () => {
+    render(<FeedCard item={{ ...mockItem, imageUrl: null }} />);
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 });

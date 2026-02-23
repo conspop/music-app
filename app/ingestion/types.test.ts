@@ -73,6 +73,39 @@ describe("ingestion types", () => {
         expect(result.data.summary).toBeUndefined();
       }
     });
+
+    it("accepts a valid releaseType", () => {
+      for (const rt of ["album", "single", "ep", "compilation"]) {
+        const result = extractedReleaseItemSchema.safeParse({
+          ...validRelease,
+          releaseType: rt,
+        });
+        expect(result.success).toBe(true);
+        if (result.success) expect(result.data.releaseType).toBe(rt);
+      }
+    });
+
+    it("accepts null releaseType", () => {
+      const result = extractedReleaseItemSchema.safeParse({
+        ...validRelease,
+        releaseType: null,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.releaseType).toBeUndefined();
+    });
+
+    it("accepts omitted releaseType", () => {
+      const result = extractedReleaseItemSchema.safeParse(validRelease);
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects invalid releaseType value", () => {
+      const result = extractedReleaseItemSchema.safeParse({
+        ...validRelease,
+        releaseType: "mixtape",
+      });
+      expect(result.success).toBe(false);
+    });
   });
 
   describe("extractedEventItemSchema", () => {

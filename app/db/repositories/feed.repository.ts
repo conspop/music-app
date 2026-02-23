@@ -23,6 +23,7 @@ export function findFeedItems(
       url: contentItems.url,
       summary: contentItems.summary,
       imageUrl: contentItems.imageUrl,
+      releaseType: contentItems.releaseType,
       confidence: contentItems.confidence,
       publishedAt: contentItems.publishedAt,
       createdAt: contentItems.createdAt,

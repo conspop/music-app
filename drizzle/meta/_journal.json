@@ -15,6 +15,13 @@
       "when": 1771803552143,
       "tag": "0001_special_loki",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1771804336541,
+      "tag": "0002_low_scarecrow",
+      "breakpoints": true
     }
   ]
 }

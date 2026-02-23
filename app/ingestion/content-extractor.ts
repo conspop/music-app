@@ -29,12 +29,12 @@ Search for:
 1. Upcoming releases — albums, singles, EPs, or music videos announced for release in the future or in the past 2 weeks. These are the highest priority.
 2. Recent releases — anything released since ${yearAgoStr} that is noteworthy (debut albums, major singles, collaborations).
 
-For each item return: title, url, summary, imageUrl (optional), publishedAt (YYYY-MM-DD — use the release date, not the announcement date), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+For each item return: title, url, summary, imageUrl (optional), releaseType (one of: "album", "single", "ep", "compilation"), publishedAt (YYYY-MM-DD — use the release date, not the announcement date), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
     EVENT: `Find upcoming concerts, shows, and live performances for the artist "${artistName}". Today is ${today}.
 
 Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: check event listings, venue calendars, and multi-artist shows in addition to the artist's own tour page.
 
-For each event found return: title, url, summary, eventDate (YYYY-MM-DD), eventVenue, eventCity, eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+For each event found return: title, url (prefer a direct ticket-purchase or official event page URL when available), summary, eventDate (YYYY-MM-DD), eventVenue, eventCity, eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
   };
 
   return `${typeInstructions[type]}

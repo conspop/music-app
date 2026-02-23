@@ -13,14 +13,22 @@ export interface ReleaseProvider {
   }): Promise<ExtractedItem[]>;
 }
 
+function mapAlbumType(albumType: string): ExtractedItem["releaseType"] {
+  if (albumType === "album" || albumType === "single" || albumType === "compilation") {
+    return albumType;
+  }
+  return undefined;
+}
+
 function albumToExtractedItem(album: SpotifyAlbum): ExtractedItem {
   return {
     type: "RELEASE",
     title: album.name,
     url: album.external_urls.spotify,
-    summary: `${album.album_type === "single" ? "Single" : "Album"} — ${album.total_tracks} track${album.total_tracks === 1 ? "" : "s"}`,
+    summary: `${album.total_tracks} track${album.total_tracks === 1 ? "" : "s"}`,
     imageUrl: album.images[0]?.url,
     publishedAt: album.release_date,
+    releaseType: mapAlbumType(album.album_type),
     confidence: 1.0,
   };
 }

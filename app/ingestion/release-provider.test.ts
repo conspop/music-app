@@ -32,7 +32,7 @@ function mockArtistSearch(id: string, name: string) {
 function mockAlbums(artistId: string, albums: unknown[]) {
   server.use(
     http.get(`${SPOTIFY_API}/artists/${artistId}/albums`, () =>
-      HttpResponse.json({ items: albums }),
+      HttpResponse.json({ items: albums, total: albums.length, next: null }),
     ),
   );
 }
@@ -152,5 +152,35 @@ describe("createSpotifyReleaseProvider", () => {
     const results = await provider.fetchReleases({ name: "Test Artist" });
 
     expect(results[0].imageUrl).toBe("https://i.scdn.co/image/abc");
+  });
+
+  it("maps album_type to releaseType", async () => {
+    const single = {
+      ...recentAlbum,
+      id: "alb-single",
+      name: "Hit Single",
+      album_type: "single",
+      total_tracks: 1,
+      external_urls: { spotify: "https://open.spotify.com/album/alb-single" },
+    };
+    const compilation = {
+      ...recentAlbum,
+      id: "alb-comp",
+      name: "Greatest Hits",
+      album_type: "compilation",
+      total_tracks: 20,
+      external_urls: { spotify: "https://open.spotify.com/album/alb-comp" },
+    };
+
+    mockSpotifyAuth();
+    mockArtistSearch("art1", "Test Artist");
+    mockAlbums("art1", [recentAlbum, single, compilation]);
+
+    const results = await provider.fetchReleases({ name: "Test Artist" });
+
+    expect(results).toHaveLength(3);
+    expect(results[0].releaseType).toBe("album");
+    expect(results[1].releaseType).toBe("single");
+    expect(results[2].releaseType).toBe("compilation");
   });
 });

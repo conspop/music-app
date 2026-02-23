@@ -81,6 +81,7 @@ function processItems(
       url: item.url,
       summary: item.summary ?? null,
       imageUrl: "imageUrl" in item ? (item.imageUrl ?? null) : null,
+      releaseType: "releaseType" in item ? (item.releaseType ?? null) : null,
       confidence: item.confidence,
       dedupeHash,
       publishedAt:
@@ -113,27 +114,13 @@ async function fetchItemsForType(
   const tag = `[ingest:${type}:${artist.name}]`;
 
   if (type === "RELEASE" && releaseProvider) {
-    let providerItems: ExtractedItem[] = [];
     try {
-      providerItems = await releaseProvider.fetchReleases(artist);
-      console.log(`${tag} ${providerItems.length} items from Spotify`);
+      const items = await releaseProvider.fetchReleases(artist);
+      console.log(`${tag} ${items.length} items from Spotify`);
+      return items;
     } catch (err) {
-      console.error(`${tag} Spotify provider threw:`, err);
+      console.error(`${tag} Spotify provider threw, falling back to OpenAI:`, err);
     }
-
-    let aiItems: ExtractedItem[] = [];
-    try {
-      aiItems = await contentExtractor.extract({
-        artistName: artist.name,
-        type,
-        since,
-      });
-      console.log(`${tag} ${aiItems.length} items from OpenAI`);
-    } catch (err) {
-      console.error(`${tag} OpenAI extraction threw:`, err);
-    }
-
-    return [...providerItems, ...aiItems];
   }
 
   return contentExtractor.extract({

@@ -42,13 +42,24 @@ describe("EventCard", () => {
     expect(screen.getByText(/New York/)).toBeInTheDocument();
   });
 
-  it("links to the event URL", () => {
+  it("links the title to the event URL", () => {
     render(<EventCard event={mockEvent} />);
-    const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "https://example.com/event/1");
+    const titleLink = screen.getByRole("link", { name: /Radiohead Live/i });
+    expect(titleLink).toHaveAttribute("href", "https://example.com/event/1");
   });
 
-  it("renders without a link when url is null", () => {
+  it("renders a 'Tickets / More Info' link when url is present", () => {
+    render(<EventCard event={mockEvent} />);
+    const ticketLink = screen.getByRole("link", {
+      name: /tickets/i,
+    });
+    expect(ticketLink).toHaveAttribute(
+      "href",
+      "https://example.com/event/1",
+    );
+  });
+
+  it("does not render any links when url is null", () => {
     render(<EventCard event={{ ...mockEvent, url: null }} />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
