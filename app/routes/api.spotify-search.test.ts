@@ -24,13 +24,17 @@ const SPOTIFY_API = "https://api.spotify.com/v1";
 const msw = setupServer();
 
 beforeAll(() => msw.listen({ onUnhandledRequest: "error" }));
-afterEach(() => msw.resetHandlers());
+afterEach(() => {
+  msw.resetHandlers();
+  clearSpotifyTokenCache();
+});
 afterAll(() => msw.close());
 
 vi.mock("~/server/context", () => ({
   getAppContext: vi.fn(),
 }));
 
+import { clearSpotifyTokenCache } from "~/lib/spotify-client";
 import { getAppContext } from "~/server/context";
 const mockedGetAppContext = vi.mocked(getAppContext);
 

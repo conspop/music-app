@@ -22,8 +22,18 @@ function buildPrompt(artistName: string, type: ContentType, since: Date): string
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
   const yearAgoStr = oneYearAgo.toISOString().slice(0, 10);
 
+  const sinceStr = since.toISOString().slice(0, 10);
+
   const typeInstructions: Record<ContentType, string> = {
-    RELEASE: "", // Releases are handled by the Spotify provider, not OpenAI
+    RELEASE: `Find upcoming and recently announced music releases for the artist "${artistName}". Today is ${today}. Search for:
+- Upcoming albums, singles, and EPs that have been announced but not yet released (release date in the future)
+- Recent releases (since ${sinceStr}) from music news, reviews, and announcements
+
+Sources: music news sites, artist announcements, Pitchfork, Rolling Stone, Billboard, NME, press releases, etc.
+
+CRITICAL: publishedAt must be the ACTUAL RELEASE DATE (when the album/single/EP comes out), NOT the announcement date. If an article says "announced Feb 4, 2026" and "will be released April 17, 2026" or "out April 17, 2026", use 2026-04-17 for publishedAt. The announcement date belongs only in the summary text if relevant.
+
+For each release found return: title (album/single/EP name only, e.g. "Between Us" not "Arkells Announce Between Us"), url (link to the news article or announcement — prefer authoritative sources), summary (brief 1-2 sentence description; can mention announcement context here), publishedAt (YYYY-MM-DD — the release date when the music comes out, never the announcement date), releaseType ("album" | "single" | "ep" | "compilation" when identifiable, or null), imageUrl (cover art URL if available from the article), and a confidence score (0-1).`,
     EVENT: `Find upcoming concerts, shows, and live performances for the artist "${artistName}". Today is ${today}.
 
 Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: check event listings, venue calendars, and multi-artist shows in addition to the artist's own tour page.

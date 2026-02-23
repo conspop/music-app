@@ -8,8 +8,10 @@ import {
   findContentItemsByType,
   findContentItemsByDateRange,
   findContentItemByDedupeHash,
+  findReleaseByArtistAndTitle,
+  updateContentItem,
 } from "./content-items.repository";
-import { computeDedupeHash } from "~/db/dedupe";
+import { computeDedupeHash, normalizeReleaseTitle } from "~/db/dedupe";
 
 function makeItem(overrides: Record<string, unknown> = {}) {
   return {
@@ -270,6 +272,62 @@ describe("content-items repository", () => {
     it("returns undefined when hash does not exist", () => {
       const found = findContentItemByDedupeHash(db, "nonexistent-hash");
       expect(found).toBeUndefined();
+    });
+  });
+
+  describe("findReleaseByArtistAndTitle", () => {
+    it("returns release when normalized title matches", () => {
+      insertContentItem(db, makeItem({ title: "Stick Season (Official Video)" }));
+
+      const found = findReleaseByArtistAndTitle(db, "a1", "stick season");
+      expect(found).toBeDefined();
+      expect(found!.title).toBe("Stick Season (Official Video)");
+    });
+
+    it("returns null when no matching release exists", () => {
+      insertContentItem(db, makeItem({ title: "Different Album" }));
+
+      const found = findReleaseByArtistAndTitle(db, "a1", "stick season");
+      expect(found).toBeNull();
+    });
+
+    it("returns null when artist has no releases", () => {
+      const found = findReleaseByArtistAndTitle(db, "a1", "stick season");
+      expect(found).toBeNull();
+    });
+
+    it("does not match different artist", () => {
+      insertContentItem(db, makeItem({ artistId: "a1", title: "Stick Season" }));
+      insertContentItem(
+        db,
+        makeItem({
+          id: "ci2",
+          artistId: "a2",
+          url: "https://example.com/release/2",
+          dedupeHash: computeDedupeHash("RELEASE", "a2", "https://example.com/release/2"),
+          title: "Stick Season",
+        }),
+      );
+
+      const found = findReleaseByArtistAndTitle(db, "a2", "stick season");
+      expect(found).toBeDefined();
+      expect(found!.artistId).toBe("a2");
+    });
+  });
+
+  describe("updateContentItem", () => {
+    it("updates specified fields", () => {
+      insertContentItem(db, makeItem());
+
+      const updated = updateContentItem(db, "ci1", {
+        url: "https://open.spotify.com/album/new123",
+        imageUrl: "https://example.com/art.jpg",
+        source: "spotify",
+      });
+
+      expect(updated?.url).toBe("https://open.spotify.com/album/new123");
+      expect(updated?.imageUrl).toBe("https://example.com/art.jpg");
+      expect(updated?.source).toBe("spotify");
     });
   });
 });

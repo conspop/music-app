@@ -1,5 +1,33 @@
 import { describe, it, expect } from "vitest";
-import { computeDedupeHash } from "./dedupe";
+import { computeDedupeHash, normalizeReleaseTitle } from "./dedupe";
+
+describe("normalizeReleaseTitle", () => {
+  it("lowercases and trims", () => {
+    expect(normalizeReleaseTitle("  Stick Season  ")).toBe("stick season");
+  });
+
+  it("strips (Official Video) suffix", () => {
+    expect(normalizeReleaseTitle("Stick Season (Official Video)")).toBe("stick season");
+  });
+
+  it("strips (2024) suffix", () => {
+    expect(normalizeReleaseTitle("Album Name (2024)")).toBe("album name");
+  });
+
+  it("strips - Single suffix", () => {
+    expect(normalizeReleaseTitle("Track Name - Single")).toBe("track name");
+  });
+
+  it("keeps meaningful parentheticals like (Forever)", () => {
+    expect(normalizeReleaseTitle("Stick Season (Forever)")).toBe("stick season (forever)");
+  });
+
+  it("distinguishes Stick Season from Stick Season (Forever)", () => {
+    expect(normalizeReleaseTitle("Stick Season")).toBe("stick season");
+    expect(normalizeReleaseTitle("Stick Season (Forever)")).toBe("stick season (forever)");
+    expect(normalizeReleaseTitle("Stick Season")).not.toBe(normalizeReleaseTitle("Stick Season (Forever)"));
+  });
+});
 
 describe("computeDedupeHash", () => {
   it("returns a hex string", () => {

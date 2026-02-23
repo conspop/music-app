@@ -8,6 +8,7 @@ description: Wipe ingested content from the local SQLite database (content_items
 ## Scope
 
 **Wiped** (deleted):
+- `content_item_seen` — per-user seen markers (deleted first, FK to content_items)
 - `content_items` — all releases, events, and news
 - `ingestion_runs` — ingestion run history
 
@@ -28,11 +29,10 @@ Uses `DATABASE_URL` from env (default `./sqlite.db`). Loads `.env` via dotenv.
 
 ## Implementation
 
-The script uses Drizzle's `delete().from()`:
+The script uses Drizzle's `delete().from()` in FK-safe order:
 
 ```typescript
+db.delete(contentItemSeen).run();
 db.delete(contentItems).run();
 db.delete(ingestionRuns).run();
 ```
-
-Order does not matter (no FK between these tables).

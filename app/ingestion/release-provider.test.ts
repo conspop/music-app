@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { clearSpotifyTokenCache } from "~/lib/spotify-client";
 import { createSpotifyReleaseProvider } from "./release-provider";
 
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -10,7 +11,10 @@ const SPOTIFY_API = "https://api.spotify.com/v1";
 const server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  clearSpotifyTokenCache();
+});
 afterAll(() => server.close());
 
 function mockSpotifyAuth() {

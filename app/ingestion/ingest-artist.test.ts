@@ -175,10 +175,10 @@ describe("ingestArtist", () => {
   });
 
   it("passes today as since date for EVENT extraction", async () => {
-    const capturedSince: Date[] = [];
+    const captured: { type: string; since: Date }[] = [];
     const extractor: ContentExtractor = {
-      async extract({ since }) {
-        capturedSince.push(since);
+      async extract({ type, since }) {
+        captured.push({ type, since });
         return [];
       },
     };
@@ -196,8 +196,9 @@ describe("ingestArtist", () => {
 
     vi.useRealTimers();
 
-    expect(capturedSince).toHaveLength(1);
-    expect(capturedSince[0].toISOString().slice(0, 10)).toBe("2025-07-15");
+    const eventCall = captured.find((c) => c.type === "EVENT");
+    expect(eventCall).toBeDefined();
+    expect(eventCall!.since.toISOString().slice(0, 10)).toBe("2025-07-15");
   });
 
   it("caps items per type at MAX_ITEMS_PER_TYPE", async () => {
@@ -225,7 +226,7 @@ describe("ingestArtist", () => {
     expect(result.inserted).toBe(5);
   });
 
-  it("does not call OpenAI for releases", async () => {
+  it("calls OpenAI for both RELEASE and EVENT", async () => {
     const extractCalls: string[] = [];
     const extractor: ContentExtractor = {
       async extract({ type }) {
@@ -242,7 +243,8 @@ describe("ingestArtist", () => {
       artist: { id: "a1", name: "Radiohead" },
     });
 
-    expect(extractCalls).toEqual(["EVENT"]);
+    expect(extractCalls).toContain("RELEASE");
+    expect(extractCalls).toContain("EVENT");
   });
 
   it("stores releaseType from Spotify items", async () => {
@@ -380,6 +382,100 @@ describe("ingestArtist", () => {
     expect(events[0].eventLat).toBe(43.6532);
     expect(events[0].eventLng).toBe(-79.3832);
     expect(geocoder.search).toHaveBeenCalledWith("Roy Thomson Hall, Toronto");
+  });
+
+  it("updates web-sourced release when Spotify has same title later", async () => {
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "Stick Season",
+          url: "https://pitchfork.com/reviews/albums/noah-kahan-stick-season",
+          publishedAt: "2024-02-01",
+          confidence: 0.9,
+        },
+      ],
+    });
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      releaseProvider: fakeReleaseProvider([]),
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Noah Kahan" },
+    });
+
+    const spotifyProvider = fakeReleaseProvider([
+      {
+        type: "RELEASE",
+        title: "Stick Season",
+        url: "https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6",
+        summary: "18 tracks",
+        imageUrl: "https://i.scdn.co/image/abc",
+        publishedAt: "2022-10-14",
+        releaseType: "album",
+        confidence: 1.0,
+      },
+    ]);
+
+    const result = await ingestArtist({
+      db,
+      contentExtractor: fakeExtractor({ RELEASE: [] }),
+      releaseProvider: spotifyProvider,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Noah Kahan" },
+    });
+
+    const releases = findContentItemsByArtist(db, "a1").filter((i) => i.type === "RELEASE");
+    expect(releases).toHaveLength(1);
+    expect(releases[0].url).toBe("https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6");
+    expect(releases[0].source).toBe("spotify");
+    expect(result.inserted).toBe(0);
+    expect(result.updated).toBe(1);
+  });
+
+  it("skips web-sourced release when Spotify already has same title", async () => {
+    const spotifyProvider = fakeReleaseProvider([
+      {
+        type: "RELEASE",
+        title: "Stick Season",
+        url: "https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6",
+        publishedAt: "2022-10-14",
+        confidence: 1.0,
+      },
+    ]);
+    await ingestArtist({
+      db,
+      contentExtractor: fakeExtractor({ RELEASE: [] }),
+      releaseProvider: spotifyProvider,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Noah Kahan" },
+    });
+
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "Stick Season",
+          url: "https://pitchfork.com/reviews/noah-kahan-stick-season",
+          publishedAt: "2024-02-01",
+          confidence: 0.9,
+        },
+      ],
+    });
+
+    const result = await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      releaseProvider: spotifyProvider,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Noah Kahan" },
+    });
+
+    const releases = findContentItemsByArtist(db, "a1").filter((i) => i.type === "RELEASE");
+    expect(releases).toHaveLength(1);
+    expect(releases[0].url).toBe("https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6");
+    expect(result.inserted).toBe(0);
+    expect(result.skippedDupes).toBe(2);
   });
 
   it("stores eventVenueMapsUrl when geocoder returns placeId", async () => {
