@@ -154,6 +154,74 @@ describe("createSpotifyReleaseProvider", () => {
     expect(results[0].imageUrl).toBe("https://i.scdn.co/image/abc");
   });
 
+  it("includes album with month-precision date within the last year", async () => {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const [cutoffYear] = cutoff.toISOString().slice(0, 10).split("-");
+    const monthAlbum = {
+      ...recentAlbum,
+      id: "alb-month",
+      name: "Upcoming Album",
+      release_date: `${cutoffYear}-02`,
+      release_date_precision: "month",
+      external_urls: { spotify: "https://open.spotify.com/album/alb-month" },
+    };
+
+    mockSpotifyAuth();
+    mockArtistSearch("art1", "Test Artist");
+    mockAlbums("art1", [monthAlbum]);
+
+    const results = await provider.fetchReleases({ name: "Test Artist" });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("Upcoming Album");
+  });
+
+  it("includes album with year-precision date within the last year", async () => {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const cutoffYear = cutoff.getFullYear().toString();
+    const yearAlbum = {
+      ...recentAlbum,
+      id: "alb-year",
+      name: "TBA Album",
+      release_date: cutoffYear,
+      release_date_precision: "year",
+      external_urls: { spotify: "https://open.spotify.com/album/alb-year" },
+    };
+
+    mockSpotifyAuth();
+    mockArtistSearch("art1", "Test Artist");
+    mockAlbums("art1", [yearAlbum]);
+
+    const results = await provider.fetchReleases({ name: "Test Artist" });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].title).toBe("TBA Album");
+  });
+
+  it("excludes album with month-precision date older than 1 year", async () => {
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const [cutoffYear] = cutoff.toISOString().slice(0, 10).split("-");
+    const oldMonthAlbum = {
+      ...recentAlbum,
+      id: "alb-old-month",
+      name: "Old Album",
+      release_date: `${Number(cutoffYear) - 1}-01`,
+      release_date_precision: "month",
+      external_urls: { spotify: "https://open.spotify.com/album/alb-old-month" },
+    };
+
+    mockSpotifyAuth();
+    mockArtistSearch("art1", "Test Artist");
+    mockAlbums("art1", [oldMonthAlbum]);
+
+    const results = await provider.fetchReleases({ name: "Test Artist" });
+
+    expect(results).toEqual([]);
+  });
+
   it("maps album_type to releaseType", async () => {
     const single = {
       ...recentAlbum,

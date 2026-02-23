@@ -13,6 +13,16 @@ export interface ReleaseProvider {
   }): Promise<ExtractedItem[]>;
 }
 
+function normalizeReleaseDate(date: string, precision: string): string {
+  if (precision === "year") return `${date}-12-31`;
+  if (precision === "month") {
+    const [y, m] = date.split("-").map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    return `${date}-${String(lastDay).padStart(2, "0")}`;
+  }
+  return date;
+}
+
 function mapAlbumType(albumType: string): ExtractedItem["releaseType"] {
   if (albumType === "album" || albumType === "single" || albumType === "compilation") {
     return albumType;
@@ -67,7 +77,10 @@ export function createSpotifyReleaseProvider(
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
       const cutoff = oneYearAgo.toISOString().slice(0, 10);
 
-      const recent = albums.filter((a) => a.release_date >= cutoff);
+      const recent = albums.filter(
+        (a) =>
+          normalizeReleaseDate(a.release_date, a.release_date_precision) >= cutoff,
+      );
       console.log(`${tag} ${recent.length} releases within the last year`);
 
       return recent.map(albumToExtractedItem);
