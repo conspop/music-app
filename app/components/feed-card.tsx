@@ -1,3 +1,4 @@
+import { Disc3 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 
@@ -14,6 +15,7 @@ export interface FeedItem {
   confidence: number;
   publishedAt: Date | null;
   createdAt: Date;
+  isNew?: boolean;
 }
 
 const RELEASE_TYPE_LABELS: Record<string, string> = {
@@ -46,13 +48,17 @@ export function FeedCard({ item }: { item: FeedItem }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        {item.imageUrl && (
-          <img
-            src={item.imageUrl}
-            alt={`${item.title} cover`}
-            className="h-16 w-16 shrink-0 rounded-md object-cover"
-          />
-        )}
+        <div className="h-16 w-16 shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden">
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={`${item.title} cover`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <Disc3 className="h-8 w-8 text-muted-foreground/50" />
+          )}
+        </div>
         <div className="min-w-0 flex-1 space-y-1">
           {item.url ? (
             <a
@@ -69,7 +75,12 @@ export function FeedCard({ item }: { item: FeedItem }) {
           <p className="text-sm text-muted-foreground">{item.artistName}</p>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Badge variant="secondary">{badgeLabel}</Badge>
+          <div className="flex items-center gap-1">
+            {item.isNew && (
+              <Badge variant="default">New</Badge>
+            )}
+            <Badge variant="secondary">{badgeLabel}</Badge>
+          </div>
           {item.publishedAt && (
             <span className="text-xs text-muted-foreground">
               {formatDate(item.publishedAt)}

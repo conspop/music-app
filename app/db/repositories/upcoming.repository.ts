@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
-import { artists, contentItems, follows } from "~/db/schema";
+import { artists, contentItemSeen, contentItems, follows } from "~/db/schema";
 import { haversineKm } from "~/lib/haversine";
 
 export interface UpcomingOptions {
@@ -39,10 +39,18 @@ export function findUpcomingEvents(
       eventLng: contentItems.eventLng,
       eventVenueMapsUrl: contentItems.eventVenueMapsUrl,
       createdAt: contentItems.createdAt,
+      seenAt: contentItemSeen.seenAt,
     })
     .from(contentItems)
     .innerJoin(follows, eq(contentItems.artistId, follows.artistId))
     .innerJoin(artists, eq(contentItems.artistId, artists.id))
+    .leftJoin(
+      contentItemSeen,
+      and(
+        eq(contentItems.id, contentItemSeen.contentItemId),
+        eq(contentItemSeen.userId, userId),
+      ),
+    )
     .where(
       and(
         eq(follows.userId, userId),

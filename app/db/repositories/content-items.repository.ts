@@ -1,6 +1,11 @@
 import { and, eq, gte, lte } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
 import { contentItems } from "~/db/schema";
+import { normalizeReleaseTitle } from "~/db/dedupe";
+
+export function findAllContentItemIds(db: DrizzleDb): string[] {
+  return db.select({ id: contentItems.id }).from(contentItems).all().map((r) => r.id);
+}
 
 export function findContentItemByDedupeHash(db: DrizzleDb, hash: string) {
   return db
@@ -48,4 +53,45 @@ export function findContentItemsByDateRange(
       ),
     )
     .all();
+}
+
+export function findReleaseByArtistAndTitle(
+  db: DrizzleDb,
+  artistId: string,
+  normalizedTitle: string,
+) {
+  const rows = db
+    .select()
+    .from(contentItems)
+    .where(
+      and(
+        eq(contentItems.type, "RELEASE"),
+        eq(contentItems.artistId, artistId),
+      ),
+    )
+    .all();
+  return rows.find(
+    (r) => normalizeReleaseTitle(r.title) === normalizedTitle,
+  ) ?? null;
+}
+
+export function updateContentItem(
+  db: DrizzleDb,
+  id: string,
+  patch: {
+    url?: string | null;
+    summary?: string | null;
+    imageUrl?: string | null;
+    releaseType?: string | null;
+    publishedAt?: Date | null;
+    dedupeHash?: string;
+    source?: string | null;
+  },
+) {
+  return db
+    .update(contentItems)
+    .set(patch)
+    .where(eq(contentItems.id, id))
+    .returning()
+    .get();
 }

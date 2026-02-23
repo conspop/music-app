@@ -82,6 +82,7 @@ export const contentItems = sqliteTable(
     eventLat: real("event_lat"),
     eventLng: real("event_lng"),
     eventVenueMapsUrl: text("event_venue_maps_url"),
+    source: text("source"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   },
   (table) => [
@@ -90,6 +91,27 @@ export const contentItems = sqliteTable(
     index("content_items_type_idx").on(table.type),
     index("content_items_published_at_idx").on(table.publishedAt),
     index("content_items_event_date_idx").on(table.eventDate),
+  ],
+);
+
+export const contentItemSeen = sqliteTable(
+  "content_item_seen",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    contentItemId: text("content_item_id")
+      .notNull()
+      .references(() => contentItems.id),
+    seenAt: integer("seen_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("content_item_seen_user_item_idx").on(
+      table.userId,
+      table.contentItemId,
+    ),
+    index("content_item_seen_user_id_idx").on(table.userId),
   ],
 );
 
@@ -113,6 +135,7 @@ export const ingestionRuns = sqliteTable(
 
 export const usersRelations = relations(users, ({ many }) => ({
   follows: many(follows),
+  contentItemSeen: many(contentItemSeen),
 }));
 
 export const artistsRelations = relations(artists, ({ many }) => ({
@@ -129,10 +152,19 @@ export const followsRelations = relations(follows, ({ one }) => ({
   }),
 }));
 
-export const contentItemsRelations = relations(contentItems, ({ one }) => ({
+export const contentItemsRelations = relations(contentItems, ({ one, many }) => ({
   artist: one(artists, {
     fields: [contentItems.artistId],
     references: [artists.id],
+  }),
+  seenBy: many(contentItemSeen),
+}));
+
+export const contentItemSeenRelations = relations(contentItemSeen, ({ one }) => ({
+  user: one(users, { fields: [contentItemSeen.userId], references: [users.id] }),
+  contentItem: one(contentItems, {
+    fields: [contentItemSeen.contentItemId],
+    references: [contentItems.id],
   }),
 }));
 

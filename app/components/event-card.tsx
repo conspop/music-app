@@ -1,3 +1,4 @@
+import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { MapPin, Clock, ExternalLink, Users } from "lucide-react";
 
@@ -20,6 +21,7 @@ export interface EventItem {
   eventLng: number | null;
   eventVenueMapsUrl: string | null;
   createdAt: Date;
+  isNew?: boolean;
 }
 
 function formatTime(date: Date | string | null): string {
@@ -39,9 +41,14 @@ export function EventCard({ event }: { event: EventItem }) {
   return (
     <Card>
       <CardHeader className="space-y-1.5 pb-3">
-        <h3 className="text-lg font-bold leading-tight">
-          {event.artistName}
-        </h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="text-lg font-bold leading-tight">
+            {event.artistName}
+          </h3>
+          {event.isNew && (
+            <Badge variant="default">New</Badge>
+          )}
+        </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           {location && (
             <span className="flex items-center gap-1">

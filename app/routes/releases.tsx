@@ -19,7 +19,13 @@ export async function loader({ request }: Route.LoaderArgs) {
   const items = findFeedItems(ctx.db, user.id, {
     ...(artistIds?.length ? { artistIds } : {}),
   });
-  return { items };
+
+  return {
+    items: items.map((item) => ({
+      ...item,
+      isNew: item.seenAt == null,
+    })),
+  };
 }
 
 export default function Releases() {

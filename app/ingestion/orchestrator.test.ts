@@ -4,7 +4,12 @@ import { createTestDb } from "../../tests/db-helpers";
 import { insertArtist } from "~/db/repositories/artists.repository";
 import { insertUser } from "~/db/repositories/users.repository";
 import { followArtist } from "~/db/repositories/follows.repository";
-import { findContentItemsByArtist } from "~/db/repositories/content-items.repository";
+import {
+  findContentItemsByArtist,
+  insertContentItem,
+} from "~/db/repositories/content-items.repository";
+import { contentItemSeen } from "~/db/schema";
+import { computeDedupeHash } from "~/db/dedupe";
 import type { ContentExtractor } from "./content-extractor";
 import type { ReleaseProvider } from "./release-provider";
 import type { ExtractedItem } from "./types";
@@ -227,6 +232,42 @@ describe("runIngestion", () => {
 
     expect(summary.artistsProcessed).toBe(0);
     expect(summary.totalInserted).toBe(0);
+  });
+
+  it("marks pre-existing items as seen for followers when ingestion completes", async () => {
+    followArtist(db, {
+      id: "f1",
+      userId: "u1",
+      artistId: "a1",
+      createdAt: new Date("2025-01-01"),
+    });
+
+    const preExisting = insertContentItem(db, {
+      id: "pre1",
+      type: "RELEASE",
+      artistId: "a1",
+      title: "Pre-existing Album",
+      url: "https://example.com/preexisting",
+      confidence: 0.9,
+      dedupeHash: computeDedupeHash("RELEASE", "a1", "https://example.com/preexisting"),
+      publishedAt: new Date("2025-01-01"),
+      createdAt: new Date("2025-01-01"),
+    });
+
+    const extractor = fakeExtractor({});
+    const releaseProvider = fakeReleaseProvider({});
+
+    await runIngestion({
+      db,
+      contentExtractor: extractor,
+      releaseProvider,
+      config: INGESTION_CONFIG,
+    });
+
+    const seen = db.select().from(contentItemSeen).all();
+    expect(seen).toHaveLength(1);
+    expect(seen[0].userId).toBe("u1");
+    expect(seen[0].contentItemId).toBe(preExisting.id);
   });
 
   it("aggregates errors from individual artist ingestions", async () => {

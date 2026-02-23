@@ -36,6 +36,20 @@
       "when": 1771810535754,
       "tag": "0004_volatile_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1771811278860,
+      "tag": "0005_glorious_blue_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1771811643216,
+      "tag": "0006_condemned_masque",
+      "breakpoints": true
     }
   ]
 }

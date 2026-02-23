@@ -39,7 +39,10 @@ export async function loader({ request }: Route.LoaderArgs) {
   });
 
   return {
-    events,
+    events: events.map((event) => ({
+      ...event,
+      isNew: event.seenAt == null,
+    })),
     userLocation: hasLocation
       ? { defaultRadiusKm: user.locationRadiusKm ?? 50 }
       : null,

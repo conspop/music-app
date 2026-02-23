@@ -99,4 +99,19 @@ describe("FeedCard", () => {
     render(<FeedCard item={{ ...mockItem, imageUrl: null }} />);
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
+
+  it("shows New badge when isNew is true", () => {
+    render(<FeedCard item={{ ...mockItem, isNew: true }} />);
+    expect(screen.getByText("New")).toBeInTheDocument();
+  });
+
+  it("does not show New badge when isNew is false", () => {
+    render(<FeedCard item={{ ...mockItem, isNew: false }} />);
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
+
+  it("does not show New badge when isNew is undefined", () => {
+    render(<FeedCard item={mockItem} />);
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
 });

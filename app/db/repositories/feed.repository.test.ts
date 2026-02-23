@@ -6,6 +6,7 @@ import { insertArtist } from "./artists.repository";
 import { followArtist } from "./follows.repository";
 import { insertContentItem } from "./content-items.repository";
 import { computeDedupeHash } from "~/db/dedupe";
+import { markAsSeen } from "./content-item-seen.repository";
 import { findFeedItems } from "./feed.repository";
 
 let itemCounter = 0;
@@ -185,5 +186,23 @@ describe("feed repository", () => {
 
     const items = findFeedItems(db, "u1");
     expect(items[0].artistName).toBe("Radiohead");
+  });
+
+  it("returns seenAt null for unseen items", () => {
+    insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
+
+    const items = findFeedItems(db, "u1");
+    expect(items).toHaveLength(1);
+    expect(items[0].seenAt).toBeNull();
+  });
+
+  it("returns seenAt for seen items", () => {
+    const item = insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
+    markAsSeen(db, "u1", [item.id]);
+
+    const items = findFeedItems(db, "u1");
+    expect(items).toHaveLength(1);
+    expect(items[0].seenAt).not.toBeNull();
+    expect(items[0].seenAt).toBeInstanceOf(Date);
   });
 });

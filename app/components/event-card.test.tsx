@@ -104,4 +104,19 @@ describe("EventCard", () => {
       screen.getByRole("heading", { name: "Radiohead" }),
     ).toBeInTheDocument();
   });
+
+  it("shows New badge when isNew is true", () => {
+    render(<EventCard event={{ ...mockEvent, isNew: true }} />);
+    expect(screen.getByText("New")).toBeInTheDocument();
+  });
+
+  it("does not show New badge when isNew is false", () => {
+    render(<EventCard event={{ ...mockEvent, isNew: false }} />);
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
+
+  it("does not show New badge when isNew is undefined", () => {
+    render(<EventCard event={mockEvent} />);
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
+  });
 });

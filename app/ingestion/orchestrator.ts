@@ -1,4 +1,6 @@
 import type { DrizzleDb } from "~/db/connection";
+import { findAllContentItemIds } from "~/db/repositories/content-items.repository";
+import { markPreExistingItemsAsSeen } from "~/db/repositories/content-item-seen.repository";
 import { findFollowedArtists } from "~/db/repositories/follows.repository";
 import type { ContentExtractor } from "./content-extractor";
 import type { ReleaseProvider } from "./release-provider";
@@ -25,6 +27,7 @@ export interface IngestionSummary {
 export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummary> {
   const { db, contentExtractor, releaseProvider, geocoder, config } = deps;
 
+  const preExistingItemIds = findAllContentItemIds(db);
   const artists = findFollowedArtists(db);
   const capped = artists.slice(0, config.MAX_ARTISTS_PER_RUN);
 
@@ -41,7 +44,13 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
     totalErrors: 0,
   };
 
-  for (const artist of capped) {
+  for (let i = 0; i < capped.length; i++) {
+    const artist = capped[i];
+    if (releaseProvider && i > 0) {
+      await new Promise((r) =>
+        setTimeout(r, config.SPOTIFY_ARTIST_DELAY_MS),
+      );
+    }
     console.log(`[ingestion] processing "${artist.name}" (${artist.id})`);
 
     const result = await ingestArtist({
@@ -63,6 +72,8 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
   console.log(
     `[ingestion] complete: ${summary.artistsProcessed} artists, ${summary.totalInserted} inserted, ${summary.totalSkippedDupes} dupes, ${summary.totalErrors} errors`,
   );
+
+  markPreExistingItemsAsSeen(db, preExistingItemIds);
 
   return summary;
 }

@@ -6,6 +6,7 @@ import { insertArtist } from "./artists.repository";
 import { followArtist } from "./follows.repository";
 import { insertContentItem } from "./content-items.repository";
 import { computeDedupeHash } from "~/db/dedupe";
+import { markAsSeen } from "./content-item-seen.repository";
 import { findUpcomingEvents } from "./upcoming.repository";
 
 let itemCounter = 0;
@@ -252,6 +253,30 @@ describe("upcoming repository", () => {
 
     const events = findUpcomingEvents(db, "u1");
     expect(events[0].artistName).toBe("Radiohead");
+  });
+
+  it("returns seenAt null for unseen events", () => {
+    insertContentItem(
+      db,
+      makeEvent({ artistId: "a1", eventDate: new Date("2025-08-15") }),
+    );
+
+    const events = findUpcomingEvents(db, "u1");
+    expect(events).toHaveLength(1);
+    expect(events[0].seenAt).toBeNull();
+  });
+
+  it("returns seenAt for seen events", () => {
+    const event = insertContentItem(
+      db,
+      makeEvent({ artistId: "a1", eventDate: new Date("2025-08-15") }),
+    );
+    markAsSeen(db, "u1", [event.id]);
+
+    const events = findUpcomingEvents(db, "u1");
+    expect(events).toHaveLength(1);
+    expect(events[0].seenAt).not.toBeNull();
+    expect(events[0].seenAt).toBeInstanceOf(Date);
   });
 
   describe("distance filtering", () => {
