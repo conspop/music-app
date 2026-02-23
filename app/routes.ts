@@ -6,6 +6,7 @@ import {
 } from "@react-router/dev/routes";
 
 export default [
+  route("health", "routes/health.tsx"),
   layout("routes/app-layout.tsx", [
     index("routes/index-redirect.tsx"),
 
