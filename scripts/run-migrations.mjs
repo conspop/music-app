@@ -6,7 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.DATABASE_URL ?? "./sqlite.db";
+const rawUrl = process.env.DATABASE_URL ?? "./sqlite.db";
+const dbPath = rawUrl.startsWith("file://") ? rawUrl.slice(7) : rawUrl;
 const db = drizzle(new Database(dbPath));
 
 migrate(db, {
