@@ -9,9 +9,10 @@ import {
 } from "vitest";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { createNominatimGeocoder } from "./geocoder";
+import { createGoogleGeocoder, createNominatimGeocoder } from "./geocoder";
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+const GOOGLE_GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 
 const msw = setupServer();
 beforeAll(() => msw.listen({ onUnhandledRequest: "error" }));
@@ -132,5 +133,78 @@ describe("createNominatimGeocoder", () => {
       lat: 40.0,
       lng: -74.0,
     });
+  });
+});
+
+describe("createGoogleGeocoder", () => {
+  const apiKey = "test-api-key";
+  const geocoder = createGoogleGeocoder(apiKey);
+
+  it("calls Google Geocoding API with address and key", async () => {
+    msw.use(
+      http.get(GOOGLE_GEOCODE_URL, ({ request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.get("address")).toBe("M5H 2N2");
+        expect(url.searchParams.get("key")).toBe(apiKey);
+        return HttpResponse.json({
+          status: "OK",
+          results: [],
+        });
+      }),
+    );
+    await geocoder.search("M5H 2N2");
+  });
+
+  it("returns mapped results with placeId from Google response", async () => {
+    msw.use(
+      http.get(GOOGLE_GEOCODE_URL, () =>
+        HttpResponse.json({
+          status: "OK",
+          results: [
+            {
+              place_id: "ChIJnd2vyL0KkFQRnOKlDnG0gE0",
+              formatted_address: "Toronto, ON, Canada",
+              geometry: { location: { lat: 43.6532, lng: -79.3832 } },
+              address_components: [
+                { long_name: "Toronto", short_name: "Toronto", types: ["locality", "political"] },
+                { long_name: "Ontario", short_name: "ON", types: ["administrative_area_level_1", "political"] },
+                { long_name: "Canada", short_name: "CA", types: ["country", "political"] },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const results = await geocoder.search("Toronto");
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual({
+      displayName: "Toronto, ON, Canada",
+      city: "Toronto",
+      region: "Ontario",
+      country: "Canada",
+      lat: 43.6532,
+      lng: -79.3832,
+      placeId: "ChIJnd2vyL0KkFQRnOKlDnG0gE0",
+    });
+  });
+
+  it("returns empty array on non-OK status", async () => {
+    msw.use(
+      http.get(GOOGLE_GEOCODE_URL, () =>
+        HttpResponse.json({ status: "ZERO_RESULTS", results: [] }),
+      ),
+    );
+    const results = await geocoder.search("nowhere");
+    expect(results).toEqual([]);
+  });
+
+  it("returns empty array on HTTP error", async () => {
+    msw.use(
+      http.get(GOOGLE_GEOCODE_URL, () => new HttpResponse(null, { status: 500 })),
+    );
+    const results = await geocoder.search("Toronto");
+    expect(results).toEqual([]);
   });
 });

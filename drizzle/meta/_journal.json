@@ -29,6 +29,13 @@
       "when": 1771805564099,
       "tag": "0003_salty_the_order",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1771810535754,
+      "tag": "0004_volatile_leech",
+      "breakpoints": true
     }
   ]
 }

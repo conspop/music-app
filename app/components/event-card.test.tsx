@@ -19,6 +19,7 @@ const mockEvent = {
   eventOtherArtists: "Sonic Youth, Pavement",
   eventLat: null,
   eventLng: null,
+  eventVenueMapsUrl: null,
   createdAt: new Date("2026-02-01"),
 };
 
@@ -78,9 +79,23 @@ describe("EventCard", () => {
     );
   });
 
-  it("does not render any links when url is null", () => {
-    render(<EventCard event={{ ...mockEvent, url: null }} />);
+  it("does not render any links when url and eventVenueMapsUrl are null", () => {
+    render(
+      <EventCard event={{ ...mockEvent, url: null, eventVenueMapsUrl: null }} />,
+    );
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("renders venue as a link to Google Maps when eventVenueMapsUrl is set", () => {
+    const mapsUrl = "https://www.google.com/maps/place/?q=place_id=ChIJxyz";
+    render(
+      <EventCard event={{ ...mockEvent, eventVenueMapsUrl: mapsUrl }} />,
+    );
+    const venueLink = screen.getByRole("link", {
+      name: /Madison Square Garden, New York/,
+    });
+    expect(venueLink).toHaveAttribute("href", mapsUrl);
+    expect(venueLink).toHaveAttribute("target", "_blank");
   });
 
   it("handles missing venue gracefully", () => {

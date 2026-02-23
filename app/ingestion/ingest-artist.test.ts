@@ -381,4 +381,49 @@ describe("ingestArtist", () => {
     expect(events[0].eventLng).toBe(-79.3832);
     expect(geocoder.search).toHaveBeenCalledWith("Roy Thomson Hall, Toronto");
   });
+
+  it("stores eventVenueMapsUrl when geocoder returns placeId", async () => {
+    const placeId = "ChIJnd2vyL0KkFQRnOKlDnG0gE0";
+    const geocoder: Geocoder = {
+      search: vi.fn().mockResolvedValue([
+        {
+          displayName: "Roy Thomson Hall, Toronto",
+          city: "Toronto",
+          region: "Ontario",
+          country: "Canada",
+          lat: 43.6532,
+          lng: -79.3832,
+          placeId,
+        },
+      ]),
+    };
+    const extractor = fakeExtractor({
+      EVENT: [
+        {
+          type: "EVENT",
+          title: "Show at Roy Thomson Hall",
+          url: "https://example.com/event/rth",
+          eventDate: "2025-10-15",
+          eventVenue: "Roy Thomson Hall",
+          eventCity: "Toronto",
+          confidence: 0.95,
+        },
+      ],
+    });
+
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      releaseProvider: fakeReleaseProvider([]),
+      geocoder,
+      config: { ...INGESTION_CONFIG, GEOCODE_DELAY_MS: 0 },
+      artist: { id: "a1", name: "Radiohead" },
+    });
+
+    const events = findContentItemsByArtist(db, "a1").filter((i) => i.type === "EVENT");
+    expect(events).toHaveLength(1);
+    expect(events[0].eventVenueMapsUrl).toBe(
+      `https://www.google.com/maps/place/?q=place_id=${placeId}`,
+    );
+  });
 });

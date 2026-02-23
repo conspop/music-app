@@ -18,5 +18,6 @@ export function getEnv() {
     OPENAI_API_KEY: required("OPENAI_API_KEY"),
     SPOTIFY_CLIENT_ID: optional("SPOTIFY_CLIENT_ID"),
     SPOTIFY_CLIENT_SECRET: optional("SPOTIFY_CLIENT_SECRET"),
+    GOOGLE_MAPS_API_KEY: optional("GOOGLE_MAPS_API_KEY"),
   };
 }

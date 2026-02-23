@@ -18,6 +18,7 @@ export interface EventItem {
   eventOtherArtists: string | null;
   eventLat: number | null;
   eventLng: number | null;
+  eventVenueMapsUrl: string | null;
   createdAt: Date;
 }
 
@@ -45,7 +46,18 @@ export function EventCard({ event }: { event: EventItem }) {
           {location && (
             <span className="flex items-center gap-1">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              {location}
+              {event.eventVenueMapsUrl ? (
+                <a
+                  href={event.eventVenueMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {location}
+                </a>
+              ) : (
+                location
+              )}
             </span>
           )}
           {event.eventDate && (

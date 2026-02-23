@@ -14,6 +14,17 @@ A modern, production-ready template for building full-stack React applications u
 - 🎉 TailwindCSS for styling
 - 📖 [React Router docs](https://reactrouter.com/)
 
+## Environment variables
+
+Required: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `OPENAI_API_KEY`.
+
+Optional:
+
+- `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` — Spotify release discovery.
+- `GOOGLE_MAPS_API_KEY` — When set, location search (e.g. Canadian postal codes) and event venue resolution use the Google Geocoding API; event venues become links to Google Maps. Enable the [Geocoding API](https://developers.google.com/maps/documentation/geocoding) in Google Cloud Console and restrict the key by API. On Fly.io: `fly secrets set GOOGLE_MAPS_API_KEY=your-key`.
+
+Without `GOOGLE_MAPS_API_KEY`, the app uses Nominatim (OpenStreetMap) for geocoding.
+
 ## Getting Started
 
 ### Installation

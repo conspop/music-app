@@ -83,6 +83,32 @@ describe("content-items repository", () => {
       const inserted = insertContentItem(db, eventItem);
       expect(inserted.id).toBe("ci2");
     });
+
+    it("stores and returns eventVenueMapsUrl for events", () => {
+      const eventItem = makeItem({
+        id: "ci-event",
+        type: "EVENT",
+        dedupeHash: computeDedupeHash(
+          "EVENT",
+          "a1",
+          "https://example.com/event/venue-link",
+        ),
+        eventVenue: "Roy Thomson Hall",
+        eventCity: "Toronto",
+        eventVenueMapsUrl: "https://www.google.com/maps/place/?q=place_id=ChIJxyz",
+      });
+      const inserted = insertContentItem(db, eventItem);
+      expect(inserted.eventVenueMapsUrl).toBe(
+        "https://www.google.com/maps/place/?q=place_id=ChIJxyz",
+      );
+      const found = findContentItemByDedupeHash(
+        db,
+        computeDedupeHash("EVENT", "a1", "https://example.com/event/venue-link"),
+      );
+      expect(found?.eventVenueMapsUrl).toBe(
+        "https://www.google.com/maps/place/?q=place_id=ChIJxyz",
+      );
+    });
   });
 
   describe("findContentItemsByArtist", () => {

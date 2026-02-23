@@ -60,7 +60,7 @@ function buildGeocodeQuery(item: ExtractedItem): string | null {
 async function geocodeEvent(
   item: ExtractedItem,
   geocoder: Geocoder,
-): Promise<{ lat: number; lng: number } | null> {
+): Promise<{ lat: number; lng: number; mapsUrl: string | null } | null> {
   const query = buildGeocodeQuery(item);
   if (!query) return null;
 
@@ -68,7 +68,12 @@ async function geocodeEvent(
   const first = results[0];
   if (!first) return null;
 
-  return { lat: first.lat, lng: first.lng };
+  const mapsUrl =
+    first.placeId != null
+      ? `https://www.google.com/maps/place/?q=place_id=${first.placeId}`
+      : null;
+
+  return { lat: first.lat, lng: first.lng, mapsUrl };
 }
 
 async function processItems(
@@ -103,6 +108,7 @@ async function processItems(
     let eventLat: number | null = "eventLat" in item ? (item.eventLat ?? null) : null;
     let eventLng: number | null = "eventLng" in item ? (item.eventLng ?? null) : null;
 
+    let eventVenueMapsUrl: string | null = null;
     if (
       type === "EVENT" &&
       geocoder &&
@@ -113,6 +119,7 @@ async function processItems(
       if (coords) {
         eventLat = coords.lat;
         eventLng = coords.lng;
+        eventVenueMapsUrl = coords.mapsUrl;
       }
       await new Promise((r) => setTimeout(r, config.GEOCODE_DELAY_MS));
     }
@@ -141,6 +148,7 @@ async function processItems(
       eventOtherArtists: "eventOtherArtists" in item ? (item.eventOtherArtists ?? null) : null,
       eventLat,
       eventLng,
+      eventVenueMapsUrl: type === "EVENT" ? eventVenueMapsUrl : null,
       createdAt: new Date(),
     });
 
