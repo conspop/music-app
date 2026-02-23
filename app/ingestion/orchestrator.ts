@@ -6,6 +6,7 @@ import { createLogger } from "~/lib/logger";
 import type { ContentExtractor } from "./content-extractor";
 import type { IngestionConfig } from "./config";
 import type { Geocoder } from "~/lib/geocoder";
+import type { IngestionProgressTracker } from "./ingest-artist";
 import { ingestArtist } from "./ingest-artist";
 
 const log = createLogger("ingestion");
@@ -15,6 +16,7 @@ export interface IngestionDeps {
   contentExtractor: ContentExtractor;
   geocoder?: Geocoder;
   config: IngestionConfig;
+  ingestionProgress?: IngestionProgressTracker;
 }
 
 export interface IngestionSummary {
@@ -26,7 +28,7 @@ export interface IngestionSummary {
 }
 
 export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummary> {
-  const { db, contentExtractor, geocoder, config } = deps;
+  const { db, contentExtractor, geocoder, config, ingestionProgress } = deps;
 
   const preExistingItemIds = findAllContentItemIds(db);
   const artists = findFollowedArtists(db);
@@ -53,6 +55,7 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
       geocoder,
       config,
       artist,
+      ingestionProgress,
     });
 
     summary.artistsProcessed++;

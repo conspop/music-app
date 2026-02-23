@@ -8,11 +8,15 @@ import {
   followArtist,
   unfollowArtist,
 } from "~/db/repositories/follows.repository";
+import { findLastIngestionRunsForArtists } from "~/db/repositories/ingestion-runs.repository";
 import { findOrCreateArtist } from "~/db/repositories/artists.repository";
 import { ingestArtist } from "~/ingestion/ingest-artist";
+import { ingestionProgress } from "~/ingestion/ingestion-progress";
 import { INGESTION_CONFIG } from "~/ingestion/config";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import { formatRelativeTime } from "~/lib/utils";
 import { Music, X } from "lucide-react";
 import { ArtistSearch } from "~/components/artist-search";
 
@@ -24,7 +28,17 @@ export async function loader({ request }: Route.LoaderArgs) {
   const ctx = getAppContext();
   const user = await requireUser(request, ctx.db, ctx.sessions);
   const follows = findFollowsWithArtists(ctx.db, user.id);
-  return { follows };
+  const artistIds = follows.map((f) => f.artistId);
+  const lastRuns = findLastIngestionRunsForArtists(ctx.db, artistIds);
+  const ingestingIds = new Set(ingestionProgress.getIds());
+
+  const enrichedFollows = follows.map((f) => ({
+    ...f,
+    lastIngestedAt: lastRuns[f.artistId] ?? null,
+    isIngesting: ingestingIds.has(f.artistId),
+  }));
+
+  return { follows: enrichedFollows };
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -55,8 +69,10 @@ export async function action({ request }: Route.ActionArgs) {
       ingestArtist({
         db: ctx.db,
         contentExtractor: ctx.contentExtractor,
+        geocoder: ctx.geocoder,
         config: INGESTION_CONFIG,
         artist,
+        ingestionProgress,
       }).catch((err) => console.error(`[follow] ingestion failed for "${artist.name}":`, err));
     }
 
@@ -132,7 +148,21 @@ export default function Artists() {
           {follows.map((f) => (
             <Card key={f.followId}>
               <CardContent className="flex items-center justify-between py-3">
-                <span className="font-medium">{f.artistName}</span>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{f.artistName}</span>
+                    {f.isIngesting && (
+                      <Badge variant="secondary" className="text-xs">
+                        Ingesting...
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {f.lastIngestedAt
+                      ? `Last ingested: ${formatRelativeTime(f.lastIngestedAt)}`
+                      : "Never ingested"}
+                  </span>
+                </div>
                 <Form method="post">
                   <input type="hidden" name="intent" value="unfollow" />
                   <input type="hidden" name="artistId" value={f.artistId} />

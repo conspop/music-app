@@ -5,6 +5,8 @@ import { insertArtist } from "./artists.repository";
 import {
   insertIngestionRun,
   findLastIngestionRun,
+  findLastIngestionRunForArtist,
+  findLastIngestionRunsForArtists,
 } from "./ingestion-runs.repository";
 
 describe("ingestion-runs repository", () => {
@@ -82,6 +84,93 @@ describe("ingestion-runs repository", () => {
     it("returns undefined when no runs exist", () => {
       const last = findLastIngestionRun(db, "a1", "RELEASE");
       expect(last).toBeUndefined();
+    });
+  });
+
+  describe("findLastIngestionRunForArtist", () => {
+    it("returns the most recent run across all types", () => {
+      insertIngestionRun(db, {
+        id: "r1",
+        artistId: "a1",
+        type: "RELEASE",
+        ranAt: new Date("2025-06-01T02:00:00Z"),
+        itemsFound: 3,
+      });
+      insertIngestionRun(db, {
+        id: "r2",
+        artistId: "a1",
+        type: "EVENT",
+        ranAt: new Date("2025-06-02T02:00:00Z"),
+        itemsFound: 7,
+      });
+
+      const last = findLastIngestionRunForArtist(db, "a1");
+      expect(last).toMatchObject({ ranAt: new Date("2025-06-02T02:00:00Z") });
+    });
+
+    it("returns undefined when no runs exist", () => {
+      const last = findLastIngestionRunForArtist(db, "a1");
+      expect(last).toBeUndefined();
+    });
+  });
+
+  describe("findLastIngestionRunsForArtists", () => {
+    it("returns last run per artist for multiple artists", () => {
+      insertArtist(db, {
+        id: "a2",
+        name: "Bjork",
+        createdAt: new Date("2025-01-01"),
+      });
+      insertIngestionRun(db, {
+        id: "r1",
+        artistId: "a1",
+        type: "RELEASE",
+        ranAt: new Date("2025-06-01T02:00:00Z"),
+        itemsFound: 3,
+      });
+      insertIngestionRun(db, {
+        id: "r2",
+        artistId: "a2",
+        type: "EVENT",
+        ranAt: new Date("2025-06-03T02:00:00Z"),
+        itemsFound: 1,
+      });
+      insertIngestionRun(db, {
+        id: "r3",
+        artistId: "a1",
+        type: "EVENT",
+        ranAt: new Date("2025-06-02T02:00:00Z"),
+        itemsFound: 5,
+      });
+
+      const result = findLastIngestionRunsForArtists(db, ["a1", "a2"]);
+      expect(result).toEqual({
+        a1: new Date("2025-06-02T02:00:00Z"),
+        a2: new Date("2025-06-03T02:00:00Z"),
+      });
+    });
+
+    it("returns empty object when artistIds is empty", () => {
+      const result = findLastIngestionRunsForArtists(db, []);
+      expect(result).toEqual({});
+    });
+
+    it("omits artists with no runs", () => {
+      insertArtist(db, {
+        id: "a2",
+        name: "Bjork",
+        createdAt: new Date("2025-01-01"),
+      });
+      insertIngestionRun(db, {
+        id: "r1",
+        artistId: "a1",
+        type: "RELEASE",
+        ranAt: new Date("2025-06-01T02:00:00Z"),
+        itemsFound: 3,
+      });
+
+      const result = findLastIngestionRunsForArtists(db, ["a1", "a2"]);
+      expect(result).toEqual({ a1: new Date("2025-06-01T02:00:00Z") });
     });
   });
 });

@@ -20,12 +20,18 @@ function safeDate(value: string | undefined): Date | null {
   return d;
 }
 
+export interface IngestionProgressTracker {
+  add(artistId: string): void;
+  remove(artistId: string): void;
+}
+
 export interface IngestArtistDeps {
   db: DrizzleDb;
   contentExtractor: ContentExtractor;
   geocoder?: Geocoder;
   config: IngestionConfig;
   artist: { id: string; name: string };
+  ingestionProgress?: IngestionProgressTracker;
 }
 
 export interface IngestArtistResult {
@@ -199,49 +205,54 @@ async function fetchItemsForType(
 export async function ingestArtist(
   deps: IngestArtistDeps,
 ): Promise<IngestArtistResult> {
-  const { db, config, artist } = deps;
-  const totals: IngestArtistResult = {
-    inserted: 0,
-    updated: 0,
-    skippedDupes: 0,
-    skippedLowConfidence: 0,
-    errors: 0,
-  };
+  const { db, config, artist, ingestionProgress } = deps;
+  ingestionProgress?.add(artist.id);
+  try {
+    const totals: IngestArtistResult = {
+      inserted: 0,
+      updated: 0,
+      skippedDupes: 0,
+      skippedLowConfidence: 0,
+      errors: 0,
+    };
 
-  for (const type of CONTENT_TYPES) {
-    const since = getSinceDate(type);
-    const tag = `[ingest:${type}:${artist.name}]`;
-    console.log(`${tag} since=${since.toISOString().slice(0, 10)}`);
+    for (const type of CONTENT_TYPES) {
+      const since = getSinceDate(type);
+      const tag = `[ingest:${type}:${artist.name}]`;
+      console.log(`${tag} since=${since.toISOString().slice(0, 10)}`);
 
-    let items: ExtractedItem[];
-    try {
-      items = await fetchItemsForType(deps, type, since);
-    } catch (err) {
-      console.error(`${tag} extraction threw:`, err);
-      totals.errors++;
-      continue;
+      let items: ExtractedItem[];
+      try {
+        items = await fetchItemsForType(deps, type, since);
+      } catch (err) {
+        console.error(`${tag} extraction threw:`, err);
+        totals.errors++;
+        continue;
+      }
+
+      console.log(`${tag} ${items.length} items total`);
+
+      const result = await processItems(db, artist.id, type, items, config, deps.geocoder);
+      totals.inserted += result.inserted;
+      totals.updated += result.updated;
+      totals.skippedDupes += result.skippedDupes;
+      totals.skippedLowConfidence += result.skippedLowConfidence;
+
+      console.log(
+        `${tag} inserted=${result.inserted} updated=${result.updated} dupes=${result.skippedDupes} lowConf=${result.skippedLowConfidence}`,
+      );
+
+      insertIngestionRun(db, {
+        id: crypto.randomUUID(),
+        artistId: artist.id,
+        type,
+        ranAt: new Date(),
+        itemsFound: result.inserted,
+      });
     }
 
-    console.log(`${tag} ${items.length} items total`);
-
-    const result = await processItems(db, artist.id, type, items, config, deps.geocoder);
-    totals.inserted += result.inserted;
-    totals.updated += result.updated;
-    totals.skippedDupes += result.skippedDupes;
-    totals.skippedLowConfidence += result.skippedLowConfidence;
-
-    console.log(
-      `${tag} inserted=${result.inserted} updated=${result.updated} dupes=${result.skippedDupes} lowConf=${result.skippedLowConfidence}`,
-    );
-
-    insertIngestionRun(db, {
-      id: crypto.randomUUID(),
-      artistId: artist.id,
-      type,
-      ranAt: new Date(),
-      itemsFound: result.inserted,
-    });
+    return totals;
+  } finally {
+    ingestionProgress?.remove(artist.id);
   }
-
-  return totals;
 }

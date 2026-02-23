@@ -32,6 +32,36 @@ describe("ingestArtist", () => {
     });
   });
 
+  it("calls ingestionProgress add at start and remove in finally when provided", async () => {
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "Album",
+          url: "https://example.com/r/1",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
+      EVENT: [],
+    });
+    const ingestionProgress = {
+      add: vi.fn(),
+      remove: vi.fn(),
+    };
+
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Radiohead" },
+      ingestionProgress,
+    });
+
+    expect(ingestionProgress.add).toHaveBeenCalledWith("a1");
+    expect(ingestionProgress.remove).toHaveBeenCalledWith("a1");
+  });
+
   it("inserts items for both content types", async () => {
     const extractor = fakeExtractor({
       RELEASE: [

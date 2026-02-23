@@ -93,4 +93,60 @@ describe("Artists", () => {
       screen.getByText(/not following any artists/i),
     ).toBeInTheDocument();
   });
+
+  it("shows Never ingested when artist has no ingestion runs", () => {
+    mockUseLoaderData.mockReturnValue({
+      follows: [
+        {
+          followId: "f1",
+          artistId: "a1",
+          artistName: "Radiohead",
+          createdAt: new Date(),
+          lastIngestedAt: null,
+          isIngesting: false,
+        },
+      ],
+    });
+
+    render(<Artists />);
+    expect(screen.getByText("Never ingested")).toBeInTheDocument();
+  });
+
+  it("shows Last ingested with relative time when artist has ingestion runs", () => {
+    const pastDate = new Date();
+    pastDate.setHours(pastDate.getHours() - 2);
+    mockUseLoaderData.mockReturnValue({
+      follows: [
+        {
+          followId: "f1",
+          artistId: "a1",
+          artistName: "Radiohead",
+          createdAt: new Date(),
+          lastIngestedAt: pastDate,
+          isIngesting: false,
+        },
+      ],
+    });
+
+    render(<Artists />);
+    expect(screen.getByText(/Last ingested:/)).toBeInTheDocument();
+  });
+
+  it("shows Ingesting badge when artist is currently being ingested", () => {
+    mockUseLoaderData.mockReturnValue({
+      follows: [
+        {
+          followId: "f1",
+          artistId: "a1",
+          artistName: "Radiohead",
+          createdAt: new Date(),
+          lastIngestedAt: null,
+          isIngesting: true,
+        },
+      ],
+    });
+
+    render(<Artists />);
+    expect(screen.getByText("Ingesting...")).toBeInTheDocument();
+  });
 });
