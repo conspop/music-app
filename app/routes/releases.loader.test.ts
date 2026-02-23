@@ -136,4 +136,24 @@ describe("releases loader", () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0].isNew).toBe(false);
   });
+
+  it("filters to new items when ?new=1", async () => {
+    const seenItem = insertContentItem(db, makeItem({ type: "RELEASE" }));
+    insertContentItem(db, makeItem({ type: "RELEASE" }));
+    db.insert(contentItemSeen)
+      .values({
+        id: crypto.randomUUID(),
+        userId: "u1",
+        contentItemId: seenItem.id,
+        seenAt: new Date(),
+      })
+      .run();
+
+    const request = await authedRequest("http://localhost/releases?new=1");
+    const result = await callLoader(request);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).not.toBe(seenItem.id);
+    expect(result.items[0].isNew).toBe(true);
+  });
 });

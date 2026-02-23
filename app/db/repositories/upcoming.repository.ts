@@ -1,10 +1,11 @@
-import { and, asc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
 import { artists, contentItemSeen, contentItems, follows } from "~/db/schema";
 import { haversineKm } from "~/lib/haversine";
 
 export interface UpcomingOptions {
   artistIds?: string[];
+  newOnly?: boolean;
   userLat?: number;
   userLng?: number;
   maxDistanceKm?: number;
@@ -59,6 +60,7 @@ export function findUpcomingEvents(
         opts.artistIds?.length
           ? inArray(contentItems.artistId, opts.artistIds)
           : undefined,
+        opts.newOnly ? isNull(contentItemSeen.seenAt) : undefined,
       ),
     )
     .orderBy(asc(contentItems.eventDate))

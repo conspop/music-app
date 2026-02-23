@@ -5,6 +5,7 @@ import { requireUser } from "~/auth/require-user";
 import { findUpcomingEvents } from "~/db/repositories/upcoming.repository";
 import { EventCard, type EventItem } from "~/components/event-card";
 import { DistanceFilter } from "~/components/distance-filter";
+import { NewFilter } from "~/components/new-filter";
 import { CalendarDays } from "lucide-react";
 
 export function meta({}: Route.MetaArgs) {
@@ -33,8 +34,11 @@ export async function loader({ request }: Route.LoaderArgs) {
         }
       : {};
 
+  const newParam = url.searchParams.get("new");
+  const newOnly = newParam === "1" || newParam === "true";
   const events = findUpcomingEvents(ctx.db, user.id, {
     ...(artistIds?.length ? { artistIds } : {}),
+    ...(newOnly ? { newOnly: true } : {}),
     ...distanceOpts,
   });
 
@@ -95,9 +99,12 @@ export default function Events() {
 
   return (
     <div className="space-y-8">
-      {userLocation && (
-        <DistanceFilter defaultRadiusKm={userLocation.defaultRadiusKm} />
-      )}
+      <div className="flex flex-wrap items-center gap-4">
+        <NewFilter />
+        {userLocation && (
+          <DistanceFilter defaultRadiusKm={userLocation.defaultRadiusKm} />
+        )}
+      </div>
 
       {events.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">

@@ -205,4 +205,15 @@ describe("feed repository", () => {
     expect(items[0].seenAt).not.toBeNull();
     expect(items[0].seenAt).toBeInstanceOf(Date);
   });
+
+  it("filters to new items only when newOnly is true", () => {
+    const seenItem = insertContentItem(db, makeItem({ artistId: "a1", type: "RELEASE" }));
+    insertContentItem(db, makeItem({ artistId: "a2", type: "RELEASE" }));
+    markAsSeen(db, "u1", [seenItem.id]);
+
+    const items = findFeedItems(db, "u1", { newOnly: true });
+    expect(items).toHaveLength(1);
+    expect(items[0].artistId).toBe("a2");
+    expect(items[0].seenAt).toBeNull();
+  });
 });

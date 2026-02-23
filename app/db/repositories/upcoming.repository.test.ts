@@ -279,6 +279,23 @@ describe("upcoming repository", () => {
     expect(events[0].seenAt).toBeInstanceOf(Date);
   });
 
+  it("filters to new events only when newOnly is true", () => {
+    const seenEvent = insertContentItem(
+      db,
+      makeEvent({ artistId: "a1", eventDate: new Date("2025-08-15") }),
+    );
+    insertContentItem(
+      db,
+      makeEvent({ artistId: "a2", eventDate: new Date("2025-08-16") }),
+    );
+    markAsSeen(db, "u1", [seenEvent.id]);
+
+    const events = findUpcomingEvents(db, "u1", { newOnly: true });
+    expect(events).toHaveLength(1);
+    expect(events[0].artistId).toBe("a2");
+    expect(events[0].seenAt).toBeNull();
+  });
+
   describe("distance filtering", () => {
     const londonLat = 51.5074;
     const londonLng = -0.1278;

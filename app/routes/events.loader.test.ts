@@ -145,4 +145,24 @@ describe("events loader", () => {
     expect(result.events).toHaveLength(1);
     expect(result.events[0].isNew).toBe(false);
   });
+
+  it("filters to new events when ?new=1", async () => {
+    const seenEvent = insertContentItem(db, makeEvent());
+    insertContentItem(db, makeEvent());
+    db.insert(contentItemSeen)
+      .values({
+        id: crypto.randomUUID(),
+        userId: "u1",
+        contentItemId: seenEvent.id,
+        seenAt: new Date(),
+      })
+      .run();
+
+    const request = await authedRequest("http://localhost/events?new=1");
+    const result = await callLoader(request);
+
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0].id).not.toBe(seenEvent.id);
+    expect(result.events[0].isNew).toBe(true);
+  });
 });

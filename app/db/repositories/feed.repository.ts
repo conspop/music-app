@@ -1,9 +1,10 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
 import { artists, contentItemSeen, contentItems, follows } from "~/db/schema";
 
 export interface FeedOptions {
   artistIds?: string[];
+  newOnly?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -46,6 +47,7 @@ export function findFeedItems(
         opts.artistIds?.length
           ? inArray(contentItems.artistId, opts.artistIds)
           : undefined,
+        opts.newOnly ? isNull(contentItemSeen.seenAt) : undefined,
       ),
     )
     .orderBy(desc(contentItems.publishedAt))

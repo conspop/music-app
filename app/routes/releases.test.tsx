@@ -1,12 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
+const mockSetSearchParams = vi.fn();
 vi.mock("react-router", async () => {
   const actual =
     await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useLoaderData: vi.fn(),
+    useSearchParams: vi.fn(() => [
+      new URLSearchParams(),
+      mockSetSearchParams,
+    ]),
   };
 });
 
