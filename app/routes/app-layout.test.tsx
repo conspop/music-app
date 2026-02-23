@@ -102,4 +102,18 @@ describe("AppLayout", () => {
       "/events?artists=a1,a2",
     );
   });
+
+  it("preserves types filter in tab links", () => {
+    mockSearchParams.current = new URLSearchParams("types=album,single");
+
+    render(<AppLayout />);
+    expect(screen.getByRole("link", { name: /releases/i })).toHaveAttribute(
+      "href",
+      "/releases?types=album,single",
+    );
+    expect(screen.getByRole("link", { name: /events/i })).toHaveAttribute(
+      "href",
+      "/events?types=album,single",
+    );
+  });
 });

@@ -50,7 +50,7 @@ function TabLink({ to, children }: { to: string; children: React.ReactNode }) {
 function useFilteredTo(path: string): string {
   const [searchParams] = useSearchParams();
   const parts: string[] = [];
-  for (const key of ["artists", "distance"] as const) {
+  for (const key of ["artists", "distance", "types"] as const) {
     const val = searchParams.get(key);
     if (val) parts.push(`${key}=${val}`);
   }

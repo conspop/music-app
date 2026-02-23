@@ -1,6 +1,7 @@
 import { Disc3 } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
+import { RELEASE_TYPE_LABELS } from "~/lib/release-types";
 
 export interface FeedItem {
   id: string;
@@ -17,13 +18,6 @@ export interface FeedItem {
   createdAt: Date;
   isNew?: boolean;
 }
-
-const RELEASE_TYPE_LABELS: Record<string, string> = {
-  album: "Album",
-  single: "Single",
-  ep: "EP",
-  compilation: "Compilation",
-};
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "";

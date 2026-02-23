@@ -216,4 +216,54 @@ describe("feed repository", () => {
     expect(items[0].artistId).toBe("a2");
     expect(items[0].seenAt).toBeNull();
   });
+
+  it("filters by releaseTypes when specified", () => {
+    insertContentItem(
+      db,
+      makeItem({ artistId: "a1", type: "RELEASE", releaseType: "album" }),
+    );
+    insertContentItem(
+      db,
+      makeItem({ artistId: "a1", type: "RELEASE", releaseType: "single" }),
+    );
+    insertContentItem(
+      db,
+      makeItem({ artistId: "a2", type: "RELEASE", releaseType: "ep" }),
+    );
+
+    const items = findFeedItems(db, "u1", { releaseTypes: ["album"] });
+    expect(items).toHaveLength(1);
+    expect(items[0].releaseType).toBe("album");
+  });
+
+  it("returns items for multiple releaseTypes", () => {
+    insertContentItem(
+      db,
+      makeItem({ artistId: "a1", type: "RELEASE", releaseType: "album" }),
+    );
+    insertContentItem(
+      db,
+      makeItem({ artistId: "a2", type: "RELEASE", releaseType: "single" }),
+    );
+
+    const items = findFeedItems(db, "u1", {
+      releaseTypes: ["album", "single"],
+    });
+    expect(items).toHaveLength(2);
+  });
+
+  it("excludes items with null releaseType when filtering by releaseTypes", () => {
+    insertContentItem(
+      db,
+      makeItem({ artistId: "a1", type: "RELEASE", releaseType: null }),
+    );
+    insertContentItem(
+      db,
+      makeItem({ artistId: "a1", type: "RELEASE", releaseType: "album" }),
+    );
+
+    const items = findFeedItems(db, "u1", { releaseTypes: ["album"] });
+    expect(items).toHaveLength(1);
+    expect(items[0].releaseType).toBe("album");
+  });
 });

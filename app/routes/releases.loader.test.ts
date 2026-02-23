@@ -156,4 +156,21 @@ describe("releases loader", () => {
     expect(result.items[0].id).not.toBe(seenItem.id);
     expect(result.items[0].isNew).toBe(true);
   });
+
+  it("filters by release type when ?types=album", async () => {
+    insertContentItem(
+      db,
+      makeItem({ type: "RELEASE", releaseType: "album" }),
+    );
+    insertContentItem(
+      db,
+      makeItem({ type: "RELEASE", releaseType: "single" }),
+    );
+
+    const request = await authedRequest("http://localhost/releases?types=album");
+    const result = await callLoader(request);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].releaseType).toBe("album");
+  });
 });

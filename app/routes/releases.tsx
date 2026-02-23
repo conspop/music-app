@@ -5,6 +5,7 @@ import { requireUser } from "~/auth/require-user";
 import { findFeedItems } from "~/db/repositories/feed.repository";
 import { FeedCard } from "~/components/feed-card";
 import { NewFilter } from "~/components/new-filter";
+import { ReleaseTypeFilter } from "~/components/release-type-filter";
 import { Disc3 } from "lucide-react";
 
 export function meta({}: Route.MetaArgs) {
@@ -17,10 +18,12 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
 
   const artistIds = url.searchParams.get("artists")?.split(",").filter(Boolean);
+  const releaseTypes = url.searchParams.get("types")?.split(",").filter(Boolean);
   const newParam = url.searchParams.get("new");
   const newOnly = newParam === "1" || newParam === "true";
   const items = findFeedItems(ctx.db, user.id, {
     ...(artistIds?.length ? { artistIds } : {}),
+    ...(releaseTypes?.length ? { releaseTypes } : {}),
     ...(newOnly ? { newOnly: true } : {}),
   });
 
@@ -37,7 +40,10 @@ export default function Releases() {
 
   return (
     <div className="space-y-4">
-      <NewFilter />
+      <div className="flex flex-wrap items-center gap-4">
+        <NewFilter />
+        <ReleaseTypeFilter />
+      </div>
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Disc3 className="mb-4 h-12 w-12 text-muted-foreground/50" />

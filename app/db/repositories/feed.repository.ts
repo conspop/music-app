@@ -5,6 +5,7 @@ import { artists, contentItemSeen, contentItems, follows } from "~/db/schema";
 export interface FeedOptions {
   artistIds?: string[];
   newOnly?: boolean;
+  releaseTypes?: string[];
   limit?: number;
   offset?: number;
 }
@@ -46,6 +47,9 @@ export function findFeedItems(
         eq(contentItems.type, "RELEASE"),
         opts.artistIds?.length
           ? inArray(contentItems.artistId, opts.artistIds)
+          : undefined,
+        opts.releaseTypes?.length
+          ? inArray(contentItems.releaseType, opts.releaseTypes)
           : undefined,
         opts.newOnly ? isNull(contentItemSeen.seenAt) : undefined,
       ),
