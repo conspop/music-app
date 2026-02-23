@@ -49,9 +49,12 @@ function TabLink({ to, children }: { to: string; children: React.ReactNode }) {
 
 function useFilteredTo(path: string): string {
   const [searchParams] = useSearchParams();
-  const artists = searchParams.get("artists");
-  if (!artists) return path;
-  return `${path}?artists=${artists}`;
+  const parts: string[] = [];
+  for (const key of ["artists", "distance"] as const) {
+    const val = searchParams.get(key);
+    if (val) parts.push(`${key}=${val}`);
+  }
+  return parts.length ? `${path}?${parts.join("&")}` : path;
 }
 
 export default function AppLayout() {

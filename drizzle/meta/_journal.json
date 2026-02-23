@@ -22,6 +22,13 @@
       "when": 1771804336541,
       "tag": "0002_low_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1771805564099,
+      "tag": "0003_salty_the_order",
+      "breakpoints": true
     }
   ]
 }

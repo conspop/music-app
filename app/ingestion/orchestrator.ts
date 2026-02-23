@@ -3,12 +3,14 @@ import { findFollowedArtists } from "~/db/repositories/follows.repository";
 import type { ContentExtractor } from "./content-extractor";
 import type { ReleaseProvider } from "./release-provider";
 import type { IngestionConfig } from "./config";
+import type { Geocoder } from "~/lib/geocoder";
 import { ingestArtist } from "./ingest-artist";
 
 export interface IngestionDeps {
   db: DrizzleDb;
   contentExtractor: ContentExtractor;
   releaseProvider?: ReleaseProvider;
+  geocoder?: Geocoder;
   config: IngestionConfig;
 }
 
@@ -21,7 +23,7 @@ export interface IngestionSummary {
 }
 
 export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummary> {
-  const { db, contentExtractor, releaseProvider, config } = deps;
+  const { db, contentExtractor, releaseProvider, geocoder, config } = deps;
 
   const artists = findFollowedArtists(db);
   const capped = artists.slice(0, config.MAX_ARTISTS_PER_RUN);
@@ -46,6 +48,7 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
       db,
       contentExtractor,
       releaseProvider,
+      geocoder,
       config,
       artist,
     });

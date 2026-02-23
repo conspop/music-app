@@ -6,6 +6,7 @@ import { findContentItemsByArtist } from "~/db/repositories/content-items.reposi
 import { findLastIngestionRun } from "~/db/repositories/ingestion-runs.repository";
 import type { ContentExtractor } from "./content-extractor";
 import type { ReleaseProvider } from "./release-provider";
+import type { Geocoder } from "~/lib/geocoder";
 import type { ExtractedItem } from "./types";
 import { INGESTION_CONFIG } from "./config";
 import { ingestArtist } from "./ingest-artist";
@@ -336,5 +337,48 @@ describe("ingestArtist", () => {
     expect(result.inserted).toBe(0);
     const releases = findContentItemsByArtist(db, "a1").filter(i => i.type === "RELEASE");
     expect(releases).toHaveLength(0);
+  });
+
+  it("geocodes events without coordinates when geocoder is provided", async () => {
+    const geocoder: Geocoder = {
+      search: vi.fn().mockResolvedValue([
+        {
+          displayName: "Toronto, Ontario, Canada",
+          city: "Toronto",
+          region: "Ontario",
+          country: "Canada",
+          lat: 43.6532,
+          lng: -79.3832,
+        },
+      ]),
+    };
+    const extractor = fakeExtractor({
+      EVENT: [
+        {
+          type: "EVENT",
+          title: "Show at Roy Thomson Hall",
+          url: "https://example.com/event/toronto",
+          eventDate: "2025-10-15",
+          eventVenue: "Roy Thomson Hall",
+          eventCity: "Toronto",
+          confidence: 0.95,
+        },
+      ],
+    });
+
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      releaseProvider: fakeReleaseProvider([]),
+      geocoder,
+      config: { ...INGESTION_CONFIG, GEOCODE_DELAY_MS: 0 },
+      artist: { id: "a1", name: "Radiohead" },
+    });
+
+    const events = findContentItemsByArtist(db, "a1").filter((i) => i.type === "EVENT");
+    expect(events).toHaveLength(1);
+    expect(events[0].eventLat).toBe(43.6532);
+    expect(events[0].eventLng).toBe(-79.3832);
+    expect(geocoder.search).toHaveBeenCalledWith("Roy Thomson Hall, Toronto");
   });
 });

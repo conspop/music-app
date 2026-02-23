@@ -1,9 +1,13 @@
 import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import type { DrizzleDb } from "~/db/connection";
 import { artists, contentItems, follows } from "~/db/schema";
+import { haversineKm } from "~/lib/haversine";
 
 export interface UpcomingOptions {
   artistIds?: string[];
+  userLat?: number;
+  userLng?: number;
+  maxDistanceKm?: number;
   limit?: number;
   offset?: number;
 }
@@ -30,6 +34,7 @@ export function findUpcomingEvents(
       eventDate: contentItems.eventDate,
       eventVenue: contentItems.eventVenue,
       eventCity: contentItems.eventCity,
+      eventOtherArtists: contentItems.eventOtherArtists,
       eventLat: contentItems.eventLat,
       eventLng: contentItems.eventLng,
       createdAt: contentItems.createdAt,
@@ -57,5 +62,21 @@ export function findUpcomingEvents(
     query = query.offset(opts.offset);
   }
 
-  return query.all();
+  const rows = query.all();
+
+  if (
+    opts.maxDistanceKm != null &&
+    opts.userLat != null &&
+    opts.userLng != null
+  ) {
+    return rows.filter((row) => {
+      if (row.eventLat == null || row.eventLng == null) return false;
+      return (
+        haversineKm(opts.userLat!, opts.userLng!, row.eventLat, row.eventLng) <=
+        opts.maxDistanceKm!
+      );
+    });
+  }
+
+  return rows;
 }

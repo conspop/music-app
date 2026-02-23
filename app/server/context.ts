@@ -4,9 +4,11 @@ import { createSessionStorage } from "~/auth/session.server";
 import { createGoogleAuthProvider } from "~/auth/google-auth-provider";
 import { createOpenAIContentExtractor } from "~/ingestion/content-extractor";
 import { createSpotifyReleaseProvider } from "~/ingestion/release-provider";
+import { createNominatimGeocoder } from "~/lib/geocoder";
 import type { AuthDeps } from "~/auth/auth-handlers";
 import type { ContentExtractor } from "~/ingestion/content-extractor";
 import type { ReleaseProvider } from "~/ingestion/release-provider";
+import type { Geocoder } from "~/lib/geocoder";
 
 export interface SpotifyCredentials {
   clientId: string;
@@ -15,6 +17,7 @@ export interface SpotifyCredentials {
 
 export interface AppContext extends AuthDeps {
   contentExtractor: ContentExtractor;
+  geocoder: Geocoder;
   releaseProvider?: ReleaseProvider;
   spotifyCredentials?: SpotifyCredentials;
 }
@@ -35,6 +38,7 @@ export function getAppContext(): AppContext {
       : "http://localhost:5173/auth/google/callback",
   );
   const contentExtractor = createOpenAIContentExtractor(env.OPENAI_API_KEY);
+  const geocoder = createNominatimGeocoder();
 
   const spotifyCredentials =
     env.SPOTIFY_CLIENT_ID && env.SPOTIFY_CLIENT_SECRET
@@ -45,6 +49,6 @@ export function getAppContext(): AppContext {
     ? createSpotifyReleaseProvider(spotifyCredentials.clientId, spotifyCredentials.clientSecret)
     : undefined;
 
-  cached = { db, sessions, authProvider, contentExtractor, releaseProvider, spotifyCredentials };
+  cached = { db, sessions, authProvider, contentExtractor, geocoder, releaseProvider, spotifyCredentials };
   return cached;
 }

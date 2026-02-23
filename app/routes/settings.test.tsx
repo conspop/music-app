@@ -10,6 +10,7 @@ vi.mock("react-router", async () => {
     useLoaderData: vi.fn(),
     useActionData: vi.fn(),
     useNavigation: () => ({ state: "idle" }),
+    useFetcher: () => ({ data: null, state: "idle", load: vi.fn() }),
     Form: ({
       children,
       ...props
@@ -42,15 +43,20 @@ describe("Settings", () => {
     mockUseActionData.mockReturnValue(undefined);
   });
 
-  it("renders current location in form fields", () => {
+  it("shows selected location summary when location is set", () => {
     mockUseLoaderData.mockReturnValue({ user: mockUser });
 
     render(<Settings />);
-    expect(screen.getByLabelText(/city/i)).toHaveValue("London");
-    expect(screen.getByLabelText(/region/i)).toHaveValue("England");
-    expect(screen.getByLabelText(/country/i)).toHaveValue("UK");
-    expect(screen.getByLabelText(/latitude/i)).toHaveValue(51.5);
-    expect(screen.getByLabelText(/longitude/i)).toHaveValue(-0.12);
+    expect(screen.getByText("London, England, UK")).toBeInTheDocument();
+  });
+
+  it("renders a Change button when location is set", () => {
+    mockUseLoaderData.mockReturnValue({ user: mockUser });
+
+    render(<Settings />);
+    expect(
+      screen.getByRole("button", { name: /change/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders a save button", () => {
@@ -62,7 +68,7 @@ describe("Settings", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders empty fields when no location is set", () => {
+  it("shows location search when no location is set", () => {
     mockUseLoaderData.mockReturnValue({
       user: {
         ...mockUser,
@@ -76,7 +82,38 @@ describe("Settings", () => {
     });
 
     render(<Settings />);
-    expect(screen.getByLabelText(/city/i)).toHaveValue("");
+    expect(
+      screen.getByPlaceholderText(/search for a city/i),
+    ).toBeInTheDocument();
+  });
+
+  it("shows location search when Change is clicked", async () => {
+    mockUseLoaderData.mockReturnValue({ user: mockUser });
+    const user = userEvent.setup();
+
+    render(<Settings />);
+    await user.click(screen.getByRole("button", { name: /change/i }));
+
+    expect(
+      screen.getByPlaceholderText(/search for a city/i),
+    ).toBeInTheDocument();
+  });
+
+  it("disables save button when no location is selected", () => {
+    mockUseLoaderData.mockReturnValue({
+      user: {
+        ...mockUser,
+        locationCity: null,
+        locationRegion: null,
+        locationCountry: null,
+        locationLat: null,
+        locationLng: null,
+        locationRadiusKm: 50,
+      },
+    });
+
+    render(<Settings />);
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
 
   it("shows success message from action data", () => {
@@ -93,6 +130,19 @@ describe("Settings", () => {
 
     render(<Settings />);
     expect(screen.getByText("City is required")).toBeInTheDocument();
+  });
+
+  it("includes hidden form fields for the selected location", () => {
+    mockUseLoaderData.mockReturnValue({ user: mockUser });
+
+    const { container } = render(<Settings />);
+    const form = container.querySelector("form")!;
+
+    expect(form.querySelector('input[name="city"]')).toHaveValue("London");
+    expect(form.querySelector('input[name="region"]')).toHaveValue("England");
+    expect(form.querySelector('input[name="country"]')).toHaveValue("UK");
+    expect(form.querySelector('input[name="lat"]')).toHaveValue("51.5");
+    expect(form.querySelector('input[name="lng"]')).toHaveValue("-0.12");
   });
 
   describe("ingestion trigger", () => {

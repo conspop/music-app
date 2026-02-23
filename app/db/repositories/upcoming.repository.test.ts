@@ -253,4 +253,96 @@ describe("upcoming repository", () => {
     const events = findUpcomingEvents(db, "u1");
     expect(events[0].artistName).toBe("Radiohead");
   });
+
+  describe("distance filtering", () => {
+    const londonLat = 51.5074;
+    const londonLng = -0.1278;
+
+    it("excludes events beyond maxDistanceKm", () => {
+      insertContentItem(
+        db,
+        makeEvent({
+          artistId: "a1",
+          eventDate: new Date("2025-08-15"),
+          eventLat: 51.5,
+          eventLng: -0.13,
+        }),
+      );
+      // Paris — ~340 km from London
+      insertContentItem(
+        db,
+        makeEvent({
+          artistId: "a2",
+          eventDate: new Date("2025-08-16"),
+          eventLat: 48.8566,
+          eventLng: 2.3522,
+        }),
+      );
+
+      const events = findUpcomingEvents(db, "u1", {
+        userLat: londonLat,
+        userLng: londonLng,
+        maxDistanceKm: 50,
+      });
+      expect(events).toHaveLength(1);
+      expect(events[0].eventCity).toBe("London");
+    });
+
+    it("includes events within maxDistanceKm", () => {
+      // Paris — ~340 km from London
+      insertContentItem(
+        db,
+        makeEvent({
+          artistId: "a1",
+          eventDate: new Date("2025-08-15"),
+          eventLat: 48.8566,
+          eventLng: 2.3522,
+        }),
+      );
+
+      const events = findUpcomingEvents(db, "u1", {
+        userLat: londonLat,
+        userLng: londonLng,
+        maxDistanceKm: 400,
+      });
+      expect(events).toHaveLength(1);
+    });
+
+    it("excludes events with no coordinates when distance filter is active", () => {
+      insertContentItem(
+        db,
+        makeEvent({
+          artistId: "a1",
+          eventDate: new Date("2025-08-15"),
+          eventLat: null,
+          eventLng: null,
+        }),
+      );
+
+      const events = findUpcomingEvents(db, "u1", {
+        userLat: londonLat,
+        userLng: londonLng,
+        maxDistanceKm: 50,
+      });
+      expect(events).toHaveLength(0);
+    });
+
+    it("skips distance filter when user location is missing", () => {
+      // Paris — far from London
+      insertContentItem(
+        db,
+        makeEvent({
+          artistId: "a1",
+          eventDate: new Date("2025-08-15"),
+          eventLat: 48.8566,
+          eventLng: 2.3522,
+        }),
+      );
+
+      const events = findUpcomingEvents(db, "u1", {
+        maxDistanceKm: 50,
+      });
+      expect(events).toHaveLength(1);
+    });
+  });
 });

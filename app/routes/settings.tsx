@@ -5,8 +5,10 @@ import { getAppContext } from "~/server/context";
 import { requireUser } from "~/auth/require-user";
 import { updateUserLocation } from "~/db/repositories/users.repository";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { LocationSearch } from "~/components/location-search";
+import { MapPin } from "lucide-react";
+import type { GeocoderResult } from "~/lib/geocoder";
 import type { IngestionSummary } from "~/ingestion/orchestrator";
 
 export function meta({}: Route.MetaArgs) {
@@ -149,11 +151,58 @@ function IngestionTrigger() {
   );
 }
 
+interface SelectedLocation {
+  city: string;
+  region: string;
+  country: string;
+  lat: number;
+  lng: number;
+}
+
+function userToSelected(user: {
+  locationCity: string | null;
+  locationRegion: string | null;
+  locationCountry: string | null;
+  locationLat: number | null;
+  locationLng: number | null;
+}): SelectedLocation | null {
+  if (user.locationCity && user.locationLat != null && user.locationLng != null) {
+    return {
+      city: user.locationCity,
+      region: user.locationRegion ?? "",
+      country: user.locationCountry ?? "",
+      lat: user.locationLat,
+      lng: user.locationLng,
+    };
+  }
+  return null;
+}
+
+function formatLocationSummary(loc: SelectedLocation): string {
+  return [loc.city, loc.region, loc.country].filter(Boolean).join(", ");
+}
+
 export default function Settings() {
   const { user } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state !== "idle";
+
+  const [selected, setSelected] = useState<SelectedLocation | null>(
+    userToSelected(user),
+  );
+  const [isSearching, setIsSearching] = useState(!selected);
+
+  function handleLocationSelect(result: GeocoderResult) {
+    setSelected({
+      city: result.city,
+      region: result.region,
+      country: result.country,
+      lat: result.lat,
+      lng: result.lng,
+    });
+    setIsSearching(false);
+  }
 
   return (
     <div className="space-y-8">
@@ -176,64 +225,36 @@ export default function Settings() {
 
       <Form method="post" className="max-w-md space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
-          <Input
-            id="city"
-            name="city"
-            defaultValue={user.locationCity ?? ""}
-            required
-          />
+          <Label>Location</Label>
+          {isSearching ? (
+            <LocationSearch onSelect={handleLocationSelect} />
+          ) : selected ? (
+            <div className="flex items-center gap-3 rounded-md border px-3 py-2">
+              <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="flex-1 text-sm">
+                {formatLocationSummary(selected)}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSearching(true)}
+              >
+                Change
+              </Button>
+            </div>
+          ) : null}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="region">Region</Label>
-          <Input
-            id="region"
-            name="region"
-            defaultValue={user.locationRegion ?? ""}
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="country">Country</Label>
-          <Input
-            id="country"
-            name="country"
-            defaultValue={user.locationCountry ?? ""}
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="lat">Latitude</Label>
-            <Input
-              id="lat"
-              name="lat"
-              type="number"
-              step="any"
-              min={-90}
-              max={90}
-              defaultValue={user.locationLat ?? ""}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lng">Longitude</Label>
-            <Input
-              id="lng"
-              name="lng"
-              type="number"
-              step="any"
-              min={-180}
-              max={180}
-              defaultValue={user.locationLng ?? ""}
-              required
-            />
-          </div>
-        </div>
+        {selected && (
+          <>
+            <input type="hidden" name="city" value={selected.city} />
+            <input type="hidden" name="region" value={selected.region} />
+            <input type="hidden" name="country" value={selected.country} />
+            <input type="hidden" name="lat" value={selected.lat} />
+            <input type="hidden" name="lng" value={selected.lng} />
+          </>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="radiusKm">Search radius (km)</Label>
@@ -251,7 +272,7 @@ export default function Settings() {
           </select>
         </div>
 
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || !selected}>
           {isSubmitting ? "Saving..." : "Save location"}
         </Button>
       </Form>

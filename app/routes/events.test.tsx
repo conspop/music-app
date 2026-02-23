@@ -33,6 +33,7 @@ describe("Events", () => {
           eventDate: new Date("2026-03-15T20:00:00"),
           eventVenue: "Madison Square Garden",
           eventCity: "New York",
+          eventOtherArtists: null,
           eventLat: null,
           eventLng: null,
           createdAt: new Date("2026-02-01"),
@@ -41,7 +42,7 @@ describe("Events", () => {
     });
 
     render(<Events />);
-    expect(screen.getByText("Radiohead at MSG")).toBeInTheDocument();
+    expect(screen.getByText("Radiohead")).toBeInTheDocument();
   });
 
   it("renders empty state when no events", () => {
@@ -68,6 +69,7 @@ describe("Events", () => {
           eventDate: new Date("2026-03-15T20:00:00"),
           eventVenue: "MSG",
           eventCity: "New York",
+          eventOtherArtists: null,
           eventLat: null,
           eventLng: null,
           createdAt: new Date("2026-02-01"),
@@ -86,6 +88,7 @@ describe("Events", () => {
           eventDate: new Date("2026-03-16T19:00:00"),
           eventVenue: "Brooklyn Steel",
           eventCity: "Brooklyn",
+          eventOtherArtists: null,
           eventLat: null,
           eventLng: null,
           createdAt: new Date("2026-02-01"),

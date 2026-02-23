@@ -23,4 +23,5 @@ export default [
   route("api/upcoming", "routes/api.upcoming.tsx"),
   route("api/ingest", "routes/api.ingest.tsx"),
   route("api/spotify-search", "routes/api.spotify-search.tsx"),
+  route("api/geocode", "routes/api.geocode.tsx"),
 ] satisfies RouteConfig;

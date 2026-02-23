@@ -9,43 +9,62 @@ const mockEvent = {
   artistName: "Radiohead",
   title: "Radiohead Live",
   url: "https://example.com/event/1",
-  summary: null,
+  summary: "An incredible live performance",
   imageUrl: null,
   confidence: 0.9,
   publishedAt: null,
   eventDate: new Date("2026-03-15T20:00:00"),
   eventVenue: "Madison Square Garden",
   eventCity: "New York",
+  eventOtherArtists: "Sonic Youth, Pavement",
   eventLat: null,
   eventLng: null,
   createdAt: new Date("2026-02-01"),
 };
 
 describe("EventCard", () => {
-  it("renders the title", () => {
+  it("renders the artist name prominently", () => {
     render(<EventCard event={mockEvent} />);
-    expect(screen.getByText("Radiohead Live")).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: "Radiohead" });
+    expect(heading).toBeInTheDocument();
   });
 
-  it("renders the artist name", () => {
+  it("renders the venue and city", () => {
     render(<EventCard event={mockEvent} />);
-    expect(screen.getByText("Radiohead")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Madison Square Garden, New York/),
+    ).toBeInTheDocument();
   });
 
-  it("renders the venue", () => {
+  it("renders the time", () => {
     render(<EventCard event={mockEvent} />);
-    expect(screen.getByText(/Madison Square Garden/)).toBeInTheDocument();
+    expect(screen.getByText(/8:00\s*PM/)).toBeInTheDocument();
   });
 
-  it("renders the city", () => {
+  it("renders other artists", () => {
     render(<EventCard event={mockEvent} />);
-    expect(screen.getByText(/New York/)).toBeInTheDocument();
+    expect(screen.getByText(/with Sonic Youth, Pavement/)).toBeInTheDocument();
   });
 
-  it("links the title to the event URL", () => {
+  it("does not render other artists when null", () => {
+    render(
+      <EventCard event={{ ...mockEvent, eventOtherArtists: null }} />,
+    );
+    expect(screen.queryByText(/with /)).not.toBeInTheDocument();
+  });
+
+  it("renders the description", () => {
     render(<EventCard event={mockEvent} />);
-    const titleLink = screen.getByRole("link", { name: /Radiohead Live/i });
-    expect(titleLink).toHaveAttribute("href", "https://example.com/event/1");
+    expect(
+      screen.getByText("An incredible live performance"),
+    ).toBeInTheDocument();
+  });
+
+  it("does not render description when summary is null", () => {
+    render(<EventCard event={{ ...mockEvent, summary: null }} />);
+    expect(
+      screen.queryByText("An incredible live performance"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders a 'Tickets / More Info' link when url is present", () => {
@@ -66,6 +85,8 @@ describe("EventCard", () => {
 
   it("handles missing venue gracefully", () => {
     render(<EventCard event={{ ...mockEvent, eventVenue: null }} />);
-    expect(screen.getByText("Radiohead Live")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Radiohead" }),
+    ).toBeInTheDocument();
   });
 });

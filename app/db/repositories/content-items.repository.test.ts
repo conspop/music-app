@@ -192,6 +192,46 @@ describe("content-items repository", () => {
     });
   });
 
+  describe("eventOtherArtists column", () => {
+    it("stores and retrieves eventOtherArtists", () => {
+      const item = insertContentItem(
+        db,
+        makeItem({
+          id: "ev1",
+          type: "EVENT",
+          url: "https://example.com/event/1",
+          dedupeHash: computeDedupeHash(
+            "EVENT",
+            "a1",
+            "https://example.com/event/1",
+          ),
+          eventOtherArtists: "Sonic Youth, Pavement",
+        }),
+      );
+
+      expect(item.eventOtherArtists).toBe("Sonic Youth, Pavement");
+    });
+
+    it("allows null eventOtherArtists", () => {
+      const item = insertContentItem(
+        db,
+        makeItem({
+          id: "ev2",
+          type: "EVENT",
+          url: "https://example.com/event/2",
+          dedupeHash: computeDedupeHash(
+            "EVENT",
+            "a1",
+            "https://example.com/event/2",
+          ),
+          eventOtherArtists: null,
+        }),
+      );
+
+      expect(item.eventOtherArtists).toBeNull();
+    });
+  });
+
   describe("findContentItemByDedupeHash", () => {
     it("returns the item when hash exists", () => {
       const item = makeItem();

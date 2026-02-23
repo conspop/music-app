@@ -28,7 +28,7 @@ function buildPrompt(artistName: string, type: ContentType, since: Date): string
 
 Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: check event listings, venue calendars, and multi-artist shows in addition to the artist's own tour page.
 
-For each event found return: title, url (prefer a direct ticket-purchase or official event page URL when available), summary, eventDate (YYYY-MM-DD), eventVenue, eventCity, eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+For each event found return: title, url (prefer a direct ticket-purchase or official event page URL when available), summary (a short description of the event), eventDate (YYYY-MM-DDTHH:mm format — include the start time when available, otherwise default to T20:00), eventVenue, eventCity, eventOtherArtists (comma-separated names of other artists on the bill, or null if solo show), eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
   };
 
   return `${typeInstructions[type]}

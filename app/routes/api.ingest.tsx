@@ -12,6 +12,7 @@ export async function action({ request }: Route.ActionArgs) {
     db: ctx.db,
     contentExtractor: ctx.contentExtractor,
     releaseProvider: ctx.releaseProvider,
+    geocoder: ctx.geocoder,
     config: INGESTION_CONFIG,
   });
 

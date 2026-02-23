@@ -10,6 +10,7 @@ import {
 import type { ContentExtractor } from "./content-extractor";
 import type { ReleaseProvider } from "./release-provider";
 import type { IngestionConfig } from "./config";
+import type { Geocoder } from "~/lib/geocoder";
 import { CONTENT_TYPES, type ContentType, type ExtractedItem } from "./types";
 
 function safeDate(value: string | undefined): Date | null {
@@ -23,6 +24,7 @@ export interface IngestArtistDeps {
   db: DrizzleDb;
   contentExtractor: ContentExtractor;
   releaseProvider?: ReleaseProvider;
+  geocoder?: Geocoder;
   config: IngestionConfig;
   artist: { id: string; name: string; spotifyId?: string | null };
 }
@@ -45,13 +47,38 @@ function getSinceDate(type: ContentType): Date {
   return new Date();
 }
 
-function processItems(
+function buildGeocodeQuery(item: ExtractedItem): string | null {
+  if (item.type !== "EVENT") return null;
+  const venue = "eventVenue" in item ? item.eventVenue?.trim() : undefined;
+  const city = "eventCity" in item ? item.eventCity?.trim() : undefined;
+  if (venue && city) return `${venue}, ${city}`;
+  if (city) return city;
+  if (venue) return venue;
+  return null;
+}
+
+async function geocodeEvent(
+  item: ExtractedItem,
+  geocoder: Geocoder,
+): Promise<{ lat: number; lng: number } | null> {
+  const query = buildGeocodeQuery(item);
+  if (!query) return null;
+
+  const results = await geocoder.search(query);
+  const first = results[0];
+  if (!first) return null;
+
+  return { lat: first.lat, lng: first.lng };
+}
+
+async function processItems(
   db: DrizzleDb,
   artistId: string,
   type: ContentType,
   items: ExtractedItem[],
   config: IngestionConfig,
-): Pick<IngestArtistResult, "inserted" | "skippedDupes" | "skippedLowConfidence"> {
+  geocoder?: Geocoder,
+): Promise<Pick<IngestArtistResult, "inserted" | "skippedDupes" | "skippedLowConfidence">> {
   let inserted = 0;
   let skippedDupes = 0;
   let skippedLowConfidence = 0;
@@ -71,6 +98,23 @@ function processItems(
     if (findContentItemByDedupeHash(db, dedupeHash)) {
       skippedDupes++;
       continue;
+    }
+
+    let eventLat: number | null = "eventLat" in item ? (item.eventLat ?? null) : null;
+    let eventLng: number | null = "eventLng" in item ? (item.eventLng ?? null) : null;
+
+    if (
+      type === "EVENT" &&
+      geocoder &&
+      (eventLat == null || eventLng == null) &&
+      buildGeocodeQuery(item)
+    ) {
+      const coords = await geocodeEvent(item, geocoder);
+      if (coords) {
+        eventLat = coords.lat;
+        eventLng = coords.lng;
+      }
+      await new Promise((r) => setTimeout(r, config.GEOCODE_DELAY_MS));
     }
 
     insertContentItem(db, {
@@ -94,8 +138,9 @@ function processItems(
           : null,
       eventVenue: "eventVenue" in item ? (item.eventVenue ?? null) : null,
       eventCity: "eventCity" in item ? (item.eventCity ?? null) : null,
-      eventLat: "eventLat" in item ? (item.eventLat ?? null) : null,
-      eventLng: "eventLng" in item ? (item.eventLng ?? null) : null,
+      eventOtherArtists: "eventOtherArtists" in item ? (item.eventOtherArtists ?? null) : null,
+      eventLat,
+      eventLng,
       createdAt: new Date(),
     });
 
@@ -162,7 +207,7 @@ export async function ingestArtist(
 
     console.log(`${tag} ${items.length} items total`);
 
-    const result = processItems(db, artist.id, type, items, config);
+    const result = await processItems(db, artist.id, type, items, config, deps.geocoder);
     totals.inserted += result.inserted;
     totals.skippedDupes += result.skippedDupes;
     totals.skippedLowConfidence += result.skippedLowConfidence;

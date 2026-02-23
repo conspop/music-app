@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
-import { MapPin, Calendar, ExternalLink } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Users } from "lucide-react";
 
 export interface EventItem {
   id: string;
@@ -15,6 +15,7 @@ export interface EventItem {
   eventDate: Date | null;
   eventVenue: string | null;
   eventCity: string | null;
+  eventOtherArtists: string | null;
   eventLat: number | null;
   eventLng: number | null;
   createdAt: Date;
@@ -30,46 +31,49 @@ function formatTime(date: Date | string | null): string {
 }
 
 export function EventCard({ event }: { event: EventItem }) {
-  const titleContent = (
-    <h3 className="font-semibold leading-tight">{event.title}</h3>
-  );
+  const location = [event.eventVenue, event.eventCity]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <Card>
-      <CardHeader className="space-y-1">
-        {event.url ? (
-          <a
-            href={event.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-          >
-            {titleContent}
-          </a>
-        ) : (
-          titleContent
-        )}
-        <p className="text-sm text-muted-foreground">{event.artistName}</p>
+      <CardHeader className="space-y-1.5 pb-3">
+        <h3 className="text-lg font-bold leading-tight">
+          {event.artistName}
+        </h3>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          {location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              {location}
+            </span>
+          )}
+          {event.eventDate && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              {formatTime(event.eventDate)}
+            </span>
+          )}
+        </div>
       </CardHeader>
-      <CardContent className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-        {event.eventDate && (
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5" />
-            {formatTime(event.eventDate)}
-          </span>
+      <CardContent className="space-y-2 pt-0">
+        {event.eventOtherArtists && (
+          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Users className="h-3.5 w-3.5 shrink-0" />
+            with {event.eventOtherArtists}
+          </p>
         )}
-        {(event.eventVenue || event.eventCity) && (
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5" />
-            {[event.eventVenue, event.eventCity].filter(Boolean).join(", ")}
-          </span>
+        {event.summary && (
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {event.summary}
+          </p>
         )}
         {event.url && (
           <a
             href={event.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
           >
             Tickets / More Info
             <ExternalLink className="h-3.5 w-3.5" />

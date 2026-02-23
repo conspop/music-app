@@ -28,6 +28,7 @@ export const extractedEventItemSchema = z.object({
   eventDate: z.string(),
   eventVenue: z.string().min(1),
   eventCity: z.string().min(1),
+  eventOtherArtists: nullable(z.string()),
   eventLat: nullable(z.number()),
   eventLng: nullable(z.number()),
 });
