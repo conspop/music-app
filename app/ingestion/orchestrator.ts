@@ -3,7 +3,6 @@ import { findAllContentItemIds } from "~/db/repositories/content-items.repositor
 import { markPreExistingItemsAsSeen } from "~/db/repositories/content-item-seen.repository";
 import { findFollowedArtists } from "~/db/repositories/follows.repository";
 import type { ContentExtractor } from "./content-extractor";
-import type { ReleaseProvider } from "./release-provider";
 import type { IngestionConfig } from "./config";
 import type { Geocoder } from "~/lib/geocoder";
 import { ingestArtist } from "./ingest-artist";
@@ -11,7 +10,6 @@ import { ingestArtist } from "./ingest-artist";
 export interface IngestionDeps {
   db: DrizzleDb;
   contentExtractor: ContentExtractor;
-  releaseProvider?: ReleaseProvider;
   geocoder?: Geocoder;
   config: IngestionConfig;
 }
@@ -25,7 +23,7 @@ export interface IngestionSummary {
 }
 
 export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummary> {
-  const { db, contentExtractor, releaseProvider, geocoder, config } = deps;
+  const { db, contentExtractor, geocoder, config } = deps;
 
   const preExistingItemIds = findAllContentItemIds(db);
   const artists = findFollowedArtists(db);
@@ -34,7 +32,6 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
   console.log(
     `[ingestion] starting run for ${capped.length} artist(s): ${capped.map((a) => a.name).join(", ")}`,
   );
-  if (releaseProvider) console.log("[ingestion] Spotify release provider active");
 
   const summary: IngestionSummary = {
     artistsProcessed: 0,
@@ -44,19 +41,12 @@ export async function runIngestion(deps: IngestionDeps): Promise<IngestionSummar
     totalErrors: 0,
   };
 
-  for (let i = 0; i < capped.length; i++) {
-    const artist = capped[i];
-    if (releaseProvider && i > 0) {
-      await new Promise((r) =>
-        setTimeout(r, config.SPOTIFY_ARTIST_DELAY_MS),
-      );
-    }
+  for (const artist of capped) {
     console.log(`[ingestion] processing "${artist.name}" (${artist.id})`);
 
     const result = await ingestArtist({
       db,
       contentExtractor,
-      releaseProvider,
       geocoder,
       config,
       artist,

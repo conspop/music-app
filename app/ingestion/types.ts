@@ -8,7 +8,7 @@ const nullable = <T extends z.ZodTypeAny>(schema: T) =>
 
 const baseFields = {
   title: z.string().min(1),
-  url: z.string().url(),
+  url: nullable(z.string().url()),
   summary: nullable(z.string()),
   imageUrl: nullable(z.string().url()),
   confidence: z.number().min(0).max(1),

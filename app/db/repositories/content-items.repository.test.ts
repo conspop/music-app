@@ -320,14 +320,14 @@ describe("content-items repository", () => {
       insertContentItem(db, makeItem());
 
       const updated = updateContentItem(db, "ci1", {
-        url: "https://open.spotify.com/album/new123",
+        url: "https://example.com/release/new",
         imageUrl: "https://example.com/art.jpg",
-        source: "spotify",
+        source: "web",
       });
 
-      expect(updated?.url).toBe("https://open.spotify.com/album/new123");
+      expect(updated?.url).toBe("https://example.com/release/new");
       expect(updated?.imageUrl).toBe("https://example.com/art.jpg");
-      expect(updated?.source).toBe("spotify");
+      expect(updated?.source).toBe("web");
     });
   });
 });

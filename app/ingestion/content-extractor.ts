@@ -38,7 +38,7 @@ For each release found return: title (album/single/EP name only, e.g. "Between U
 
 Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: check event listings, venue calendars, and multi-artist shows in addition to the artist's own tour page.
 
-For each event found return: title, url (prefer a direct ticket-purchase or official event page URL when available), summary (a short description of the event), eventDate (YYYY-MM-DDTHH:mm format — include the start time when available, otherwise default to T20:00), eventVenue, eventCity, eventOtherArtists (comma-separated names of other artists on the bill, or null if solo show), eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+For each event found return: title, url (required — prefer a direct ticket-purchase or official event page URL; if none found, use the venue website, artist tour page, or event listing URL from your search; never return null), summary (a short description of the event), eventDate (YYYY-MM-DDTHH:mm format — include the start time when available, otherwise default to T20:00), eventVenue, eventCity, eventOtherArtists (comma-separated names of other artists on the bill, or null if solo show), eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
   };
 
   return `${typeInstructions[type]}

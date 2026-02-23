@@ -11,7 +11,6 @@ export async function action({ request }: Route.ActionArgs) {
   const summary = await runIngestion({
     db: ctx.db,
     contentExtractor: ctx.contentExtractor,
-    releaseProvider: ctx.releaseProvider,
     geocoder: ctx.geocoder,
     config: INGESTION_CONFIG,
   });

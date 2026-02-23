@@ -74,6 +74,15 @@ describe("ingestion types", () => {
       }
     });
 
+    it("accepts null url (items without URL are skipped during ingestion)", () => {
+      const result = extractedReleaseItemSchema.safeParse({
+        ...validRelease,
+        url: null,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.url).toBeUndefined();
+    });
+
     it("accepts a valid releaseType", () => {
       for (const rt of ["album", "single", "ep", "compilation"]) {
         const result = extractedReleaseItemSchema.safeParse({
@@ -142,6 +151,15 @@ describe("ingestion types", () => {
       const { eventVenue, ...noVenue } = validEvent;
       const result = extractedEventItemSchema.safeParse(noVenue);
       expect(result.success).toBe(false);
+    });
+
+    it("accepts null url (items without URL are skipped during ingestion)", () => {
+      const result = extractedEventItemSchema.safeParse({
+        ...validEvent,
+        url: null,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.url).toBeUndefined();
     });
   });
 

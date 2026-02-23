@@ -4,13 +4,11 @@ import {
   insertContentItem,
   findContentItemByDedupeHash,
   findReleaseByArtistAndTitle,
-  updateContentItem,
 } from "~/db/repositories/content-items.repository";
 import {
   insertIngestionRun,
 } from "~/db/repositories/ingestion-runs.repository";
 import type { ContentExtractor } from "./content-extractor";
-import type { ReleaseProvider } from "./release-provider";
 import type { IngestionConfig } from "./config";
 import type { Geocoder } from "~/lib/geocoder";
 import { CONTENT_TYPES, type ContentType, type ExtractedItem } from "./types";
@@ -25,10 +23,9 @@ function safeDate(value: string | undefined): Date | null {
 export interface IngestArtistDeps {
   db: DrizzleDb;
   contentExtractor: ContentExtractor;
-  releaseProvider?: ReleaseProvider;
   geocoder?: Geocoder;
   config: IngestionConfig;
-  artist: { id: string; name: string; spotifyId?: string | null };
+  artist: { id: string; name: string };
 }
 
 export interface IngestArtistResult {
@@ -79,10 +76,6 @@ async function geocodeEvent(
   return { lat: first.lat, lng: first.lng, mapsUrl };
 }
 
-function isSpotifyUrl(url: string | undefined): boolean {
-  return !!url?.includes("spotify.com/album");
-}
-
 async function processItems(
   db: DrizzleDb,
   artistId: string,
@@ -117,22 +110,7 @@ async function processItems(
       const normalizedTitle = normalizeReleaseTitle(item.title);
       const existing = findReleaseByArtistAndTitle(db, artistId, normalizedTitle);
       if (existing) {
-        const incomingSpotify = isSpotifyUrl(url);
-        const existingSpotify = isSpotifyUrl(existing.url ?? undefined);
-        if (incomingSpotify && !existingSpotify) {
-          updateContentItem(db, existing.id, {
-            url: item.url,
-            summary: item.summary ?? null,
-            imageUrl: "imageUrl" in item ? (item.imageUrl ?? null) : null,
-            releaseType: "releaseType" in item ? (item.releaseType ?? null) : null,
-            publishedAt: "publishedAt" in item ? safeDate(item.publishedAt) : null,
-            dedupeHash,
-            source: "spotify",
-          });
-          updated++;
-        } else {
-          skippedDupes++;
-        }
+        skippedDupes++;
         continue;
       }
     }
@@ -156,10 +134,7 @@ async function processItems(
       await new Promise((r) => setTimeout(r, config.GEOCODE_DELAY_MS));
     }
 
-    const source =
-      type === "RELEASE"
-        ? (isSpotifyUrl(url) ? "spotify" : "web")
-        : null;
+    const source = type === "RELEASE" ? "web" : null;
 
     insertContentItem(db, {
       id: crypto.randomUUID(),
@@ -201,29 +176,17 @@ async function fetchItemsForType(
   type: ContentType,
   since: Date,
 ): Promise<ExtractedItem[]> {
-  const { contentExtractor, releaseProvider, artist } = deps;
+  const { contentExtractor, artist } = deps;
   const tag = `[ingest:${type}:${artist.name}]`;
 
   if (type === "RELEASE") {
-    const spotify: ExtractedItem[] = [];
-    if (releaseProvider) {
-      try {
-        const items = await releaseProvider.fetchReleases(artist);
-        console.log(`${tag} ${items.length} items from Spotify`);
-        spotify.push(...items);
-      } catch (err) {
-        console.error(`${tag} Spotify provider threw:`, err);
-      }
-    }
-    const openaiSince = new Date();
-    openaiSince.setDate(openaiSince.getDate() - 90);
-    const openai = await contentExtractor.extract({
+    const items = await contentExtractor.extract({
       artistName: artist.name,
       type: "RELEASE",
-      since: openaiSince,
+      since,
     });
-    console.log(`${tag} ${openai.length} items from OpenAI`);
-    return [...spotify, ...openai];
+    console.log(`${tag} ${items.length} items from OpenAI`);
+    return items;
   }
 
   return contentExtractor.extract({

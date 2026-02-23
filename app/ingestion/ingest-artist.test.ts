@@ -5,7 +5,6 @@ import { insertArtist } from "~/db/repositories/artists.repository";
 import { findContentItemsByArtist } from "~/db/repositories/content-items.repository";
 import { findLastIngestionRun } from "~/db/repositories/ingestion-runs.repository";
 import type { ContentExtractor } from "./content-extractor";
-import type { ReleaseProvider } from "./release-provider";
 import type { Geocoder } from "~/lib/geocoder";
 import type { ExtractedItem } from "./types";
 import { INGESTION_CONFIG } from "./config";
@@ -18,14 +17,6 @@ function fakeExtractor(
     async extract({ type }) {
       return items[type] ?? [];
     },
-  };
-}
-
-function fakeReleaseProvider(
-  items: ExtractedItem[],
-): ReleaseProvider {
-  return {
-    async fetchReleases() { return items; },
   };
 }
 
@@ -42,16 +33,16 @@ describe("ingestArtist", () => {
   });
 
   it("inserts items for both content types", async () => {
-    const releaseProvider = fakeReleaseProvider([
-      {
-        type: "RELEASE",
-        title: "New Album",
-        url: "https://example.com/release/1",
-        publishedAt: "2025-06-15",
-        confidence: 0.85,
-      },
-    ]);
     const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "New Album",
+          url: "https://example.com/release/1",
+          publishedAt: "2025-06-15",
+          confidence: 0.85,
+        },
+      ],
       EVENT: [
         {
           type: "EVENT",
@@ -68,7 +59,6 @@ describe("ingestArtist", () => {
     const result = await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -79,21 +69,22 @@ describe("ingestArtist", () => {
   });
 
   it("records an ingestion run per type", async () => {
-    const releaseProvider = fakeReleaseProvider([
-      {
-        type: "RELEASE",
-        title: "Album",
-        url: "https://example.com/r/1",
-        publishedAt: "2025-06-01",
-        confidence: 0.9,
-      },
-    ]);
-    const extractor = fakeExtractor({ EVENT: [] });
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "Album",
+          url: "https://example.com/r/1",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+      ],
+      EVENT: [],
+    });
 
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -108,28 +99,29 @@ describe("ingestArtist", () => {
   });
 
   it("filters out items below MIN_CONFIDENCE", async () => {
-    const releaseProvider = fakeReleaseProvider([
-      {
-        type: "RELEASE",
-        title: "High Confidence",
-        url: "https://example.com/r/high",
-        publishedAt: "2025-06-01",
-        confidence: 0.9,
-      },
-      {
-        type: "RELEASE",
-        title: "Low Confidence",
-        url: "https://example.com/r/low",
-        publishedAt: "2025-06-01",
-        confidence: 0.3,
-      },
-    ]);
-    const extractor = fakeExtractor({ EVENT: [] });
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "High Confidence",
+          url: "https://example.com/r/high",
+          publishedAt: "2025-06-01",
+          confidence: 0.9,
+        },
+        {
+          type: "RELEASE",
+          title: "Low Confidence",
+          url: "https://example.com/r/low",
+          publishedAt: "2025-06-01",
+          confidence: 0.3,
+        },
+      ],
+      EVENT: [],
+    });
 
     const result = await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -149,13 +141,14 @@ describe("ingestArtist", () => {
       publishedAt: "2025-06-01",
       confidence: 0.9,
     };
-    const releaseProvider = fakeReleaseProvider([releaseItem]);
-    const extractor = fakeExtractor({ EVENT: [] });
+    const extractor = fakeExtractor({
+      RELEASE: [releaseItem],
+      EVENT: [],
+    });
 
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -163,7 +156,6 @@ describe("ingestArtist", () => {
     const result = await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -172,6 +164,32 @@ describe("ingestArtist", () => {
     expect(items).toHaveLength(1);
     expect(result.inserted).toBe(0);
     expect(result.skippedDupes).toBe(1);
+  });
+
+  it("passes 1 year ago as since date for RELEASE extraction", async () => {
+    const captured: { type: string; since: Date }[] = [];
+    const extractor: ContentExtractor = {
+      async extract({ type, since }) {
+        captured.push({ type, since });
+        return [];
+      },
+    };
+
+    const now = new Date("2025-07-15T12:00:00Z");
+    vi.setSystemTime(now);
+
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "Radiohead" },
+    });
+
+    vi.useRealTimers();
+
+    const releaseCall = captured.find((c) => c.type === "RELEASE");
+    expect(releaseCall).toBeDefined();
+    expect(releaseCall!.since.toISOString().slice(0, 10)).toBe("2024-07-15");
   });
 
   it("passes today as since date for EVENT extraction", async () => {
@@ -189,7 +207,6 @@ describe("ingestArtist", () => {
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider: fakeReleaseProvider([]),
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -210,13 +227,14 @@ describe("ingestArtist", () => {
       confidence: 0.9,
     }));
 
-    const releaseProvider = fakeReleaseProvider(manyItems);
-    const extractor = fakeExtractor({ EVENT: [] });
+    const extractor = fakeExtractor({
+      RELEASE: manyItems,
+      EVENT: [],
+    });
 
     const result = await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: { ...INGESTION_CONFIG, MAX_ITEMS_PER_TYPE: 5 },
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -238,7 +256,6 @@ describe("ingestArtist", () => {
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider: fakeReleaseProvider([]),
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -247,31 +264,32 @@ describe("ingestArtist", () => {
     expect(extractCalls).toContain("EVENT");
   });
 
-  it("stores releaseType from Spotify items", async () => {
-    const releaseProvider = fakeReleaseProvider([
-      {
-        type: "RELEASE",
-        title: "My Single",
-        url: "https://example.com/r/single",
-        publishedAt: "2025-06-01",
-        releaseType: "single",
-        confidence: 1.0,
-      },
-      {
-        type: "RELEASE",
-        title: "My Album",
-        url: "https://example.com/r/album",
-        publishedAt: "2025-06-01",
-        releaseType: "album",
-        confidence: 1.0,
-      },
-    ]);
-    const extractor = fakeExtractor({ EVENT: [] });
+  it("stores releaseType from extracted items", async () => {
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "My Single",
+          url: "https://example.com/r/single",
+          publishedAt: "2025-06-01",
+          releaseType: "single",
+          confidence: 1.0,
+        },
+        {
+          type: "RELEASE",
+          title: "My Album",
+          url: "https://example.com/r/album",
+          publishedAt: "2025-06-01",
+          releaseType: "album",
+          confidence: 1.0,
+        },
+      ],
+      EVENT: [],
+    });
 
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -284,21 +302,22 @@ describe("ingestArtist", () => {
   });
 
   it("stores null releaseType when not provided", async () => {
-    const releaseProvider = fakeReleaseProvider([
-      {
-        type: "RELEASE",
-        title: "Unknown Type",
-        url: "https://example.com/r/unknown",
-        publishedAt: "2025-06-01",
-        confidence: 1.0,
-      },
-    ]);
-    const extractor = fakeExtractor({ EVENT: [] });
+    const extractor = fakeExtractor({
+      RELEASE: [
+        {
+          type: "RELEASE",
+          title: "Unknown Type",
+          url: "https://example.com/r/unknown",
+          publishedAt: "2025-06-01",
+          confidence: 1.0,
+        },
+      ],
+      EVENT: [],
+    });
 
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider,
       config: INGESTION_CONFIG,
       artist: { id: "a1", name: "Radiohead" },
     });
@@ -307,27 +326,8 @@ describe("ingestArtist", () => {
     expect(items[0].releaseType).toBeNull();
   });
 
-  it("inserts no releases when Spotify provider throws", async () => {
-    const releaseProvider: ReleaseProvider = {
-      async fetchReleases(_artist) { throw new Error("Spotify down"); },
-    };
-    const extractor = fakeExtractor({ EVENT: [] });
-
-    const result = await ingestArtist({
-      db,
-      contentExtractor: extractor,
-      releaseProvider,
-      config: INGESTION_CONFIG,
-      artist: { id: "a1", name: "Radiohead" },
-    });
-
-    expect(result.inserted).toBe(0);
-    const releases = findContentItemsByArtist(db, "a1").filter(i => i.type === "RELEASE");
-    expect(releases).toHaveLength(0);
-  });
-
-  it("skips releases when no release provider is configured", async () => {
-    const extractor = fakeExtractor({ EVENT: [] });
+  it("skips releases when extractor returns empty", async () => {
+    const extractor = fakeExtractor({ RELEASE: [], EVENT: [] });
 
     const result = await ingestArtist({
       db,
@@ -355,6 +355,7 @@ describe("ingestArtist", () => {
       ]),
     };
     const extractor = fakeExtractor({
+      RELEASE: [],
       EVENT: [
         {
           type: "EVENT",
@@ -371,7 +372,6 @@ describe("ingestArtist", () => {
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider: fakeReleaseProvider([]),
       geocoder,
       config: { ...INGESTION_CONFIG, GEOCODE_DELAY_MS: 0 },
       artist: { id: "a1", name: "Radiohead" },
@@ -382,100 +382,6 @@ describe("ingestArtist", () => {
     expect(events[0].eventLat).toBe(43.6532);
     expect(events[0].eventLng).toBe(-79.3832);
     expect(geocoder.search).toHaveBeenCalledWith("Roy Thomson Hall, Toronto");
-  });
-
-  it("updates web-sourced release when Spotify has same title later", async () => {
-    const extractor = fakeExtractor({
-      RELEASE: [
-        {
-          type: "RELEASE",
-          title: "Stick Season",
-          url: "https://pitchfork.com/reviews/albums/noah-kahan-stick-season",
-          publishedAt: "2024-02-01",
-          confidence: 0.9,
-        },
-      ],
-    });
-    await ingestArtist({
-      db,
-      contentExtractor: extractor,
-      releaseProvider: fakeReleaseProvider([]),
-      config: INGESTION_CONFIG,
-      artist: { id: "a1", name: "Noah Kahan" },
-    });
-
-    const spotifyProvider = fakeReleaseProvider([
-      {
-        type: "RELEASE",
-        title: "Stick Season",
-        url: "https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6",
-        summary: "18 tracks",
-        imageUrl: "https://i.scdn.co/image/abc",
-        publishedAt: "2022-10-14",
-        releaseType: "album",
-        confidence: 1.0,
-      },
-    ]);
-
-    const result = await ingestArtist({
-      db,
-      contentExtractor: fakeExtractor({ RELEASE: [] }),
-      releaseProvider: spotifyProvider,
-      config: INGESTION_CONFIG,
-      artist: { id: "a1", name: "Noah Kahan" },
-    });
-
-    const releases = findContentItemsByArtist(db, "a1").filter((i) => i.type === "RELEASE");
-    expect(releases).toHaveLength(1);
-    expect(releases[0].url).toBe("https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6");
-    expect(releases[0].source).toBe("spotify");
-    expect(result.inserted).toBe(0);
-    expect(result.updated).toBe(1);
-  });
-
-  it("skips web-sourced release when Spotify already has same title", async () => {
-    const spotifyProvider = fakeReleaseProvider([
-      {
-        type: "RELEASE",
-        title: "Stick Season",
-        url: "https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6",
-        publishedAt: "2022-10-14",
-        confidence: 1.0,
-      },
-    ]);
-    await ingestArtist({
-      db,
-      contentExtractor: fakeExtractor({ RELEASE: [] }),
-      releaseProvider: spotifyProvider,
-      config: INGESTION_CONFIG,
-      artist: { id: "a1", name: "Noah Kahan" },
-    });
-
-    const extractor = fakeExtractor({
-      RELEASE: [
-        {
-          type: "RELEASE",
-          title: "Stick Season",
-          url: "https://pitchfork.com/reviews/noah-kahan-stick-season",
-          publishedAt: "2024-02-01",
-          confidence: 0.9,
-        },
-      ],
-    });
-
-    const result = await ingestArtist({
-      db,
-      contentExtractor: extractor,
-      releaseProvider: spotifyProvider,
-      config: INGESTION_CONFIG,
-      artist: { id: "a1", name: "Noah Kahan" },
-    });
-
-    const releases = findContentItemsByArtist(db, "a1").filter((i) => i.type === "RELEASE");
-    expect(releases).toHaveLength(1);
-    expect(releases[0].url).toBe("https://open.spotify.com/album/6o5iGTU8HzbS6LFGI8LPa6");
-    expect(result.inserted).toBe(0);
-    expect(result.skippedDupes).toBe(2);
   });
 
   it("stores eventVenueMapsUrl when geocoder returns placeId", async () => {
@@ -494,6 +400,7 @@ describe("ingestArtist", () => {
       ]),
     };
     const extractor = fakeExtractor({
+      RELEASE: [],
       EVENT: [
         {
           type: "EVENT",
@@ -510,7 +417,6 @@ describe("ingestArtist", () => {
     await ingestArtist({
       db,
       contentExtractor: extractor,
-      releaseProvider: fakeReleaseProvider([]),
       geocoder,
       config: { ...INGESTION_CONFIG, GEOCODE_DELAY_MS: 0 },
       artist: { id: "a1", name: "Radiohead" },

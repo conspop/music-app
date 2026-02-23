@@ -46,18 +46,6 @@ export interface SpotifyArtistResult {
   images: SpotifyImage[];
 }
 
-export interface SpotifyAlbum {
-  id: string;
-  name: string;
-  album_type: string;
-  release_date: string;
-  release_date_precision: string;
-  external_urls: { spotify: string };
-  images: SpotifyImage[];
-  total_tracks: number;
-  artists: { id: string; name: string }[];
-}
-
 export async function getAccessToken(
   clientId: string,
   clientSecret: string,
@@ -112,37 +100,4 @@ export async function searchArtists(
     artists: { items: SpotifyArtistResult[] };
   };
   return data.artists.items;
-}
-
-interface SpotifyAlbumsPage {
-  items: SpotifyAlbum[];
-  total: number;
-  next: string | null;
-}
-
-const ALBUMS_PAGE_LIMIT = 10;
-const ALBUMS_MAX_PAGES = 10;
-
-export async function getArtistAlbums(
-  token: string,
-  artistId: string,
-): Promise<SpotifyAlbum[]> {
-  const headers = { Authorization: `Bearer ${token}` };
-  const all: SpotifyAlbum[] = [];
-
-  let url: string | null =
-    `${SPOTIFY_API_BASE}/artists/${artistId}/albums` +
-    `?include_groups=album,single&limit=${ALBUMS_PAGE_LIMIT}`;
-
-  for (let page = 0; url && page < ALBUMS_MAX_PAGES; page++) {
-    if (page > 0) await new Promise((r) => setTimeout(r, 500));
-    const response = await fetchWithRetry(url, { headers });
-    if (!response.ok) break;
-
-    const data = (await response.json()) as SpotifyAlbumsPage;
-    all.push(...data.items);
-    url = data.next;
-  }
-
-  return all;
 }

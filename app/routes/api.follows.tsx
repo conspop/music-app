@@ -48,7 +48,6 @@ export async function action({ request }: Route.ActionArgs) {
       ingestArtist({
         db: ctx.db,
         contentExtractor: ctx.contentExtractor,
-        releaseProvider: ctx.releaseProvider,
         config: INGESTION_CONFIG,
         artist,
       }).catch((err) => console.error(`[follow] ingestion failed for "${artist.name}":`, err));
