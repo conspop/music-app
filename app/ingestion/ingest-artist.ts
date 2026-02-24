@@ -232,6 +232,17 @@ export async function ingestArtist(
 
       console.log(`${tag} ${items.length} items total`);
 
+      if (type === "EVENT") {
+        items = [...items].sort((a, b) => {
+          const da = "eventDate" in a ? safeDate(a.eventDate)?.getTime() : NaN;
+          const db = "eventDate" in b ? safeDate(b.eventDate)?.getTime() : NaN;
+          if (Number.isNaN(da) && Number.isNaN(db)) return 0;
+          if (Number.isNaN(da)) return 1;
+          if (Number.isNaN(db)) return -1;
+          return da! - db!;
+        });
+      }
+
       const result = await processItems(db, artist.id, type, items, config, deps.geocoder);
       totals.inserted += result.inserted;
       totals.updated += result.updated;

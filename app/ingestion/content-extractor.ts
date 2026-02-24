@@ -36,7 +36,11 @@ CRITICAL: publishedAt must be the ACTUAL RELEASE DATE (when the album/single/EP 
 For each release found return: title (album/single/EP name only, e.g. "Between Us" not "Arkells Announce Between Us"), url (link to the news article or announcement — prefer authoritative sources), summary (brief 1-2 sentence description; can mention announcement context here), publishedAt (YYYY-MM-DD — the release date when the music comes out, never the announcement date), releaseType ("album" | "single" | "ep" | "compilation" when identifiable, or null), imageUrl (cover art URL if available from the article), and a confidence score (0-1).`,
     EVENT: `Find upcoming concerts, shows, and live performances for the artist "${artistName}". Today is ${today}.
 
-Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: check event listings, venue calendars, and multi-artist shows in addition to the artist's own tour page.
+Date range: Include events with eventDate from today through the next year. Prioritize finding events in the next 1–2 months. Actively search for events happening in the next 2–4 weeks — check venue calendars, ticket sites (Ticketmaster, Songkick, Bandsintown) with date filters, and local event listings, not just tour announcements.
+
+Important: "${artistName}" may appear as part of a multi-artist bill, opening act, or festival lineup — not just as the headliner. Search broadly: event listings, venue calendars, multi-artist shows, and the artist's own tour page.
+
+Return events ordered by eventDate ascending (soonest first).
 
 For each event found return: title, url (required — prefer a direct ticket-purchase or official event page URL; if none found, use the venue website, artist tour page, or event listing URL from your search; never return null), summary (a short description of the event), eventDate (YYYY-MM-DDTHH:mm format — include the start time when available, otherwise default to T20:00), eventVenue, eventCity, eventOtherArtists (comma-separated names of other artists on the bill, or null if solo show), eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
   };

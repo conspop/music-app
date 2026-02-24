@@ -274,6 +274,56 @@ describe("ingestArtist", () => {
     expect(result.inserted).toBe(5);
   });
 
+  it("sorts EVENT items by eventDate ascending before capping, keeping soonest", async () => {
+    const extractor = fakeExtractor({
+      RELEASE: [],
+      EVENT: [
+        {
+          type: "EVENT",
+          title: "Far Future",
+          url: "https://example.com/event/far",
+          eventDate: "2026-06-01",
+          eventVenue: "Arena",
+          eventCity: "NYC",
+          confidence: 0.95,
+        },
+        {
+          type: "EVENT",
+          title: "Soon",
+          url: "https://example.com/event/soon",
+          eventDate: "2025-03-15",
+          eventVenue: "Club",
+          eventCity: "LA",
+          confidence: 0.95,
+        },
+        {
+          type: "EVENT",
+          title: "Near Future",
+          url: "https://example.com/event/near",
+          eventDate: "2025-08-20",
+          eventVenue: "Hall",
+          eventCity: "Chicago",
+          confidence: 0.95,
+        },
+      ],
+    });
+
+    const result = await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      config: { ...INGESTION_CONFIG, MAX_ITEMS_PER_TYPE: 2 },
+      artist: { id: "a1", name: "Radiohead" },
+    });
+
+    const items = findContentItemsByArtist(db, "a1");
+    expect(items).toHaveLength(2);
+    expect(result.inserted).toBe(2);
+    const titles = items.map((i) => i.title).sort();
+    expect(titles).toContain("Soon");
+    expect(titles).toContain("Near Future");
+    expect(titles).not.toContain("Far Future");
+  });
+
   it("calls OpenAI for both RELEASE and EVENT", async () => {
     const extractCalls: string[] = [];
     const extractor: ContentExtractor = {
