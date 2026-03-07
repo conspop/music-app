@@ -19,17 +19,22 @@ export interface EventItem {
   eventOtherArtists: string | null;
   eventLat: number | null;
   eventLng: number | null;
+  eventTimezone: string | null;
   eventVenueMapsUrl: string | null;
   createdAt: Date;
   isNew?: boolean;
 }
 
-function formatTime(date: Date | string | null): string {
+function formatTime(
+  date: Date | string | null,
+  timezone?: string | null,
+): string {
   if (!date) return "";
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    ...(timezone ? { timeZone: timezone } : {}),
   });
 }
 
@@ -70,7 +75,7 @@ export function EventCard({ event }: { event: EventItem }) {
           {event.eventDate && (
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              {formatTime(event.eventDate)}
+              {formatTime(event.eventDate, event.eventTimezone)}
             </span>
           )}
         </div>

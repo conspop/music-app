@@ -508,4 +508,34 @@ describe("ingestArtist", () => {
       `https://www.google.com/maps/place/?q=place_id=${placeId}`,
     );
   });
+
+  it("stores eventTimezone and parses eventDate as venue-local (8 PM Toronto = 01:00 UTC)", async () => {
+    const extractor = fakeExtractor({
+      RELEASE: [],
+      EVENT: [
+        {
+          type: "EVENT",
+          title: "NQ Arbuckle at Burdock",
+          url: "https://example.com/event/burdock",
+          eventDate: "2026-02-26T20:00",
+          eventVenue: "Burdock Music Hall",
+          eventCity: "Toronto",
+          confidence: 0.95,
+        },
+      ],
+    });
+
+    await ingestArtist({
+      db,
+      contentExtractor: extractor,
+      config: INGESTION_CONFIG,
+      artist: { id: "a1", name: "NQ Arbuckle" },
+    });
+
+    const events = findContentItemsByArtist(db, "a1").filter((i) => i.type === "EVENT");
+    expect(events).toHaveLength(1);
+    expect(events[0].eventTimezone).toBe("America/Toronto");
+    // 8 PM ET Feb 26 = 01:00 UTC Feb 27
+    expect(events[0].eventDate!.toISOString()).toMatch(/2026-02-27T01:00/);
+  });
 });

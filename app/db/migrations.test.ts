@@ -4,7 +4,7 @@ import { insertUser } from "./repositories/users.repository";
 import { insertArtist } from "./repositories/artists.repository";
 import { insertContentItem } from "./repositories/content-items.repository";
 import { computeDedupeHash } from "./dedupe";
-import { contentItemSeen } from "~/db/schema";
+import { contentItemSeen, contentItems } from "~/db/schema";
 import { eq } from "drizzle-orm";
 
 describe("content_item_seen migration", () => {
@@ -49,5 +49,45 @@ describe("content_item_seen migration", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].contentItemId).toBe("ci1");
     expect(rows[0].userId).toBe("u1");
+  });
+});
+
+describe("event_timezone migration", () => {
+  it("allows insert and query of eventTimezone on content_items", () => {
+    const db = createTestDb();
+
+    insertUser(db, {
+      id: "u1",
+      googleId: "g1",
+      email: "test@example.com",
+      name: "Test",
+      createdAt: new Date(),
+    });
+    insertArtist(db, {
+      id: "a1",
+      name: "Artist",
+      createdAt: new Date(),
+    });
+    insertContentItem(db, {
+      id: "ci1",
+      type: "EVENT",
+      artistId: "a1",
+      title: "Concert",
+      url: "https://example.com/event",
+      confidence: 0.9,
+      dedupeHash: computeDedupeHash("EVENT", "a1", "https://example.com/event"),
+      eventDate: new Date("2026-02-26T01:00:00.000Z"),
+      eventVenue: "Burdock Music Hall",
+      eventCity: "Toronto",
+      eventTimezone: "America/Toronto",
+      createdAt: new Date(),
+    });
+
+    const row = db
+      .select({ eventTimezone: contentItems.eventTimezone })
+      .from(contentItems)
+      .where(eq(contentItems.id, "ci1"))
+      .get();
+    expect(row?.eventTimezone).toBe("America/Toronto");
   });
 });

@@ -11,6 +11,8 @@ import {
 import type { ContentExtractor } from "./content-extractor";
 import type { IngestionConfig } from "./config";
 import type { Geocoder } from "~/lib/geocoder";
+import { resolveEventTimezone } from "~/lib/event-timezone";
+import { parseEventDateAsVenueLocal } from "~/lib/parse-event-date";
 import { CONTENT_TYPES, type ContentType, type ExtractedItem } from "./types";
 
 function safeDate(value: string | undefined): Date | null {
@@ -140,6 +142,24 @@ async function processItems(
       await new Promise((r) => setTimeout(r, config.GEOCODE_DELAY_MS));
     }
 
+    const eventTimezone =
+      type === "EVENT"
+        ? resolveEventTimezone({
+            eventCity: "eventCity" in item ? item.eventCity ?? null : null,
+            eventLat,
+            eventLng,
+          })
+        : null;
+
+    const eventDate =
+      type === "EVENT" && "eventDate" in item
+        ? parseEventDateAsVenueLocal(item.eventDate, eventTimezone) ??
+          safeDate(item.eventDate)
+        : null;
+
+    const publishedAt =
+      "publishedAt" in item ? safeDate(item.publishedAt) : null;
+
     const source = type === "RELEASE" ? "web" : null;
 
     insertContentItem(db, {
@@ -154,19 +174,14 @@ async function processItems(
       confidence: item.confidence,
       dedupeHash,
       ...(source ? { source } : {}),
-      publishedAt:
-        "publishedAt" in item
-          ? safeDate(item.publishedAt)
-          : null,
-      eventDate:
-        "eventDate" in item
-          ? safeDate(item.eventDate)
-          : null,
+      publishedAt,
+      eventDate: type === "EVENT" ? eventDate : null,
       eventVenue: "eventVenue" in item ? (item.eventVenue ?? null) : null,
       eventCity: "eventCity" in item ? (item.eventCity ?? null) : null,
       eventOtherArtists: "eventOtherArtists" in item ? (item.eventOtherArtists ?? null) : null,
       eventLat,
       eventLng,
+      eventTimezone: type === "EVENT" ? eventTimezone : null,
       eventVenueMapsUrl: type === "EVENT" ? eventVenueMapsUrl : null,
       createdAt: new Date(),
     });

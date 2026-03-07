@@ -1,0 +1,21 @@
+name: Wipe Staging Content
+on:
+  workflow_dispatch:
+jobs:
+  wipe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wipe content on staging
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST "https://music-app-staging.fly.dev/api/wipe" \
+            -H "Authorization: Bearer $CRON_SECRET_STAGING" \
+            -H "Content-Type: application/json")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "$body" | jq .
+          if [ "$http_code" != "200" ]; then
+            echo "Failed with HTTP $http_code"
+            exit 1
+          fi
+        env:
+          CRON_SECRET_STAGING: ${{ secrets.CRON_SECRET_STAGING }}

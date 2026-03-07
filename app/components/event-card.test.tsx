@@ -13,12 +13,13 @@ const mockEvent = {
   imageUrl: null,
   confidence: 0.9,
   publishedAt: null,
-  eventDate: new Date("2026-03-15T20:00:00"),
+  eventDate: new Date("2026-03-16T00:00:00.000Z"), // 8 PM ET Mar 15
   eventVenue: "Madison Square Garden",
   eventCity: "New York",
   eventOtherArtists: "Sonic Youth, Pavement",
   eventLat: null,
   eventLng: null,
+  eventTimezone: "America/New_York",
   eventVenueMapsUrl: null,
   createdAt: new Date("2026-02-01"),
 };

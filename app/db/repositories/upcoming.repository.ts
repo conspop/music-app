@@ -38,6 +38,7 @@ export function findUpcomingEvents(
       eventOtherArtists: contentItems.eventOtherArtists,
       eventLat: contentItems.eventLat,
       eventLng: contentItems.eventLng,
+      eventTimezone: contentItems.eventTimezone,
       eventVenueMapsUrl: contentItems.eventVenueMapsUrl,
       createdAt: contentItems.createdAt,
       seenAt: contentItemSeen.seenAt,

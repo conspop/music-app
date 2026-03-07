@@ -50,6 +50,13 @@
       "when": 1771811643216,
       "tag": "0006_condemned_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1771896170007,
+      "tag": "0007_uneven_killraven",
+      "breakpoints": true
     }
   ]
 }

@@ -42,7 +42,7 @@ Important: "${artistName}" may appear as part of a multi-artist bill, opening ac
 
 Return events ordered by eventDate ascending (soonest first).
 
-For each event found return: title, url (required — prefer a direct ticket-purchase or official event page URL; if none found, use the venue website, artist tour page, or event listing URL from your search; never return null), summary (a short description of the event), eventDate (YYYY-MM-DDTHH:mm format — include the start time when available, otherwise default to T20:00), eventVenue, eventCity, eventOtherArtists (comma-separated names of other artists on the bill, or null if solo show), eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
+For each event found return: title, url (required — prefer a direct ticket-purchase or official event page URL; if none found, use the venue website, artist tour page, or event listing URL from your search; never return null), summary (a short description of the event), eventDate (ISO 8601: YYYY-MM-DDTHH:mm, or with timezone when known e.g. YYYY-MM-DDTHH:mm-05:00 for Eastern; include start time when available, otherwise default to T20:00; times should be in the venue's local timezone), eventVenue, eventCity, eventOtherArtists (comma-separated names of other artists on the bill, or null if solo show), eventLat (optional), eventLng (optional), and a confidence score (0-1) indicating how relevant and reliable the item is.`,
   };
 
   return `${typeInstructions[type]}
